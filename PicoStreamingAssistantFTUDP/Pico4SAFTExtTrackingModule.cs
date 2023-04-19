@@ -19,6 +19,10 @@ public class Pico4SAFTExtTrackingModule : ExtTrackingModule
     private static byte[] receiveBytes = new byte[4096];
     private static PxrFTInfo data = new PxrFTInfo();
 
+    private static readonly bool hasHeader = false;
+    private static readonly int pxrHeaderSize = Marshal.SizeOf(typeof(UInt16));
+    private static readonly int pxrFtInfoSize = Marshal.SizeOf(typeof(PxrFTInfo));
+
     public override (bool SupportsEye, bool SupportsExpression) Supported => (true, true);
 
     public override (bool eyeSuccess, bool expressionSuccess) Initialize(bool eyeAvailable, bool expressionAvailable)
@@ -39,14 +43,19 @@ public class Pico4SAFTExtTrackingModule : ExtTrackingModule
         return (true, true);
     }
 
-    public void RetrieveStreamData()
+    private static int GetPacketSize() => 
+        hasHeader ? pxrHeaderSize + pxrFtInfoSize : pxrFtInfoSize;
+    private static int GetPacketIndex() =>
+        hasHeader ? pxrHeaderSize : 0;
+
+    private void RetrieveStreamData()
     {
         try
         {
             receiveBytes = udpClient?.Receive(ref endPoint);
 
-            IntPtr ptr = Marshal.AllocHGlobal(Marshal.SizeOf(typeof(PxrFTInfo)));
-            Marshal.Copy(receiveBytes, 0, ptr, Marshal.SizeOf(typeof(PxrFTInfo)));
+            IntPtr ptr = Marshal.AllocHGlobal(GetPacketSize());
+            Marshal.Copy(receiveBytes, GetPacketIndex(), ptr, GetPacketSize());
             data = (PxrFTInfo)Marshal.PtrToStructure(ptr, typeof(PxrFTInfo));
 
             Marshal.FreeHGlobal(ptr);
@@ -65,6 +74,7 @@ public class Pico4SAFTExtTrackingModule : ExtTrackingModule
 
     public override void Teardown()
     {
+        Logger.LogInformation("Disposing of PxrFaceTracking UDP Client.");
         udpClient?.Dispose();
     }
 }
