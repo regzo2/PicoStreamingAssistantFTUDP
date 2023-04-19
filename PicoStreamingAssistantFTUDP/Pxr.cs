@@ -3,7 +3,6 @@ using System.Runtime.InteropServices;
 
 public static class Pxr
 {
-    public const int HEADER_SIZE_BYTES = 2;
     public const int BLEND_SHAPE_NUMS = 72;
 
     public enum BlendShapeIndex
