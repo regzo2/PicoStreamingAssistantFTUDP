@@ -39,7 +39,7 @@ public class Pico4SAFTExtTrackingModule : ExtTrackingModule
         return (true, true);
     }
 
-    public static PxrFTInfo RetrieveStreamData()
+    public void RetrieveStreamData()
     {
         try
         {
@@ -53,17 +53,14 @@ public class Pico4SAFTExtTrackingModule : ExtTrackingModule
         }
         catch (Exception e)
         {
-            Console.WriteLine(e.ToString());
+            Logger.LogInformation(e.ToString());
         }
-
-        return data;
     }
 
     public override void Update()
     {
         RetrieveStreamData();
         Logger.LogInformation("JawOpen: " + data.blendShapeWeight[(int)BlendShapeIndex.JawOpen].ToString());
-        //Logger.LogInformation("JawOpen: ");
     }
 
     public override void Teardown()
