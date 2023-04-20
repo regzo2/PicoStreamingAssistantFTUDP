@@ -5,6 +5,7 @@
 ## Setup **Pico 4 Pro Module** for **VRCFaceTracking**.
 
 1. (TBP) Download the latest Streaming Assistant capable of OSC tracking *current*
+2. Remove or rename `pico_et_ft_bt_bridge.exe` in `%YourStreamingAssistantDirectory%\driver\bin\win64\`
 2. Download and install the Pico 4 Pro Module.
 * [Latest Release](https://github.com/regzo2/PicoStreamingAssistantFTUDP/releases)
   * Installer
