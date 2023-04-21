@@ -20,7 +20,7 @@ public class Pico4SAFTExtTrackingModule : ExtTrackingModule
     private static UdpClient? udpClient;
     private static IPEndPoint? endPoint;
 
-    private static byte[] receiveBytes = new byte[4096];
+    private static byte[] receiveBytes = new byte[GetPacketSize()];
     private static PxrFTInfo data = new PxrFTInfo();
 
     private static readonly bool hasHeader = false;
