@@ -31,7 +31,7 @@ public class Pico4SAFTExtTrackingModule : ExtTrackingModule
 
     public override (bool eyeSuccess, bool expressionSuccess) Initialize(bool eyeAvailable, bool expressionAvailable)
     {
-        ModuleInformation.Name = "Pico 4 Streaming Assistant";
+        ModuleInformation.Name = "Pico 4 Pro / Enterprise Streaming Assistant";
 
         var stream = GetType().Assembly.GetManifestResourceStream("Pico4SAFTExtTrackingModule.Assets.pico-hmd.png");
         ModuleInformation.StaticImages = stream != null ? new List<Stream> { stream } : ModuleInformation.StaticImages;
