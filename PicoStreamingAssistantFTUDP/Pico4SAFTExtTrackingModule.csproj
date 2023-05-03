@@ -23,4 +23,8 @@
     <ProjectReference Include="..\..\VRCFaceTracking\VRCFaceTracking.Core\VRCFaceTracking.Core.csproj" />
   </ItemGroup>
 
+  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
+    <Exec Command="XCOPY &quot;$(TargetDir)\Pico4SAFTExtTrackingModule.dll&quot; &quot;%appdata%\VRCFaceTracking\CustomLibs\4d885bd8-e97f-4e0d-be40-55c8503e0620&quot; /S /Y" />
+  </Target>
+
 </Project>
