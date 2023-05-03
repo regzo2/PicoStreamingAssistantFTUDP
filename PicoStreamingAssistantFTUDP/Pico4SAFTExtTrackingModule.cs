@@ -17,8 +17,9 @@ public class Pico4SAFTExtTrackingModule : ExtTrackingModule
     const string IP_ADDRESS = "127.0.0.1";
     const int PORT_NUMBER = 29763; // Temporary port as of current Pico 4 SA app.
 
-    private static UdpClient? udpClient;
-    private static IPEndPoint? endPoint;
+    private static UdpClient udpClient = new UdpClient();
+    private static IPEndPoint endPoint;
+    private static CancellationTokenSource cts = new CancellationTokenSource();
 
     private static byte[] receiveBytes = new byte[GetPacketSize()];
     private static PxrFTInfo data = new PxrFTInfo();
@@ -31,25 +32,44 @@ public class Pico4SAFTExtTrackingModule : ExtTrackingModule
 
     public override (bool eyeSuccess, bool expressionSuccess) Initialize(bool eyeAvailable, bool expressionAvailable)
     {
+        bool attemptSuccess;
+        Logger.LogInformation("Initializing Pico Streaming Assistant data stream.");
+        try
+        {
+            udpClient = new UdpClient(PORT_NUMBER);
+            endPoint = new IPEndPoint(IPAddress.Parse(IP_ADDRESS), PORT_NUMBER);
+            udpClient.Client.ReceiveTimeout = 15000; // Initialization timeout. 
+
+            Logger.LogDebug("Host end-point: " + endPoint.ToString());
+            Logger.LogDebug("Initialization Timeout: " + udpClient.Client.ReceiveTimeout.ToString() + " ms");
+            Logger.LogDebug("Client established: attempting to receive PxrFTInfo.");
+
+            attemptSuccess = RecievePxrData();
+            Logger.LogDebug("Streaming Assistant handshake success.");
+        }
+        catch (Exception e)
+        {
+            Logger.LogInformation("Module failed to establish a connection. " + e.Message);
+            Teardown(); // Closes UDP client and any other objects
+            return (false, false);
+        }
+        
         ModuleInformation.Name = "Pico 4 Pro / Enterprise";
 
         var stream = GetType().Assembly.GetManifestResourceStream("Pico4SAFTExtTrackingModule.Assets.pico-hmd.png");
         ModuleInformation.StaticImages = stream != null ? new List<Stream> { stream } : ModuleInformation.StaticImages;
 
-        Logger.LogInformation("Initializing UDP client. Accepting on port:" + PORT_NUMBER);
-        try
-        {
-            udpClient = new UdpClient(PORT_NUMBER);
-            endPoint = new IPEndPoint(IPAddress.Parse(IP_ADDRESS), PORT_NUMBER);
-            Logger.LogInformation("Client success! Receiving PxrFTInfo.");
-        }
-        catch (Exception)
-        {
-            Logger.LogInformation("Client failed to create UDP instance.");
-            return (false, false);
-        }
+        udpClient.Client.ReceiveTimeout = 0;
 
-        return (true, true);
+        Task.Run(() =>
+        {
+            while (true)
+            {
+                RecievePxrData();
+            }
+        }, cts.Token);
+
+        return (attemptSuccess, attemptSuccess);
     }
 
     private static int GetPacketSize() => 
@@ -57,11 +77,11 @@ public class Pico4SAFTExtTrackingModule : ExtTrackingModule
     private static int GetPacketIndex() =>
         hasHeader ? pxrHeaderSize : 0;
 
-    private void RetrieveStreamData()
+    private bool RecievePxrData()
     {
         try
         {
-            receiveBytes = udpClient?.Receive(ref endPoint);
+            receiveBytes = udpClient.Receive(ref endPoint);
 
             IntPtr ptr = Marshal.AllocHGlobal(GetPacketSize());
             Marshal.Copy(receiveBytes, GetPacketIndex(), ptr, GetPacketSize());
@@ -72,7 +92,10 @@ public class Pico4SAFTExtTrackingModule : ExtTrackingModule
         catch (Exception e)
         {
             Logger.LogInformation(e.ToString());
+            return false;
         }
+
+        return true;
     }
 
     private static void UpdateEye(ref float[] pxrShape, ref UnifiedEyeData unifiedEye)
@@ -175,9 +198,9 @@ public class Pico4SAFTExtTrackingModule : ExtTrackingModule
 
     public override void Update()
     {
+        Thread.Sleep(10);
         if (Status == ModuleState.Active)
         {
-            RetrieveStreamData();
             UpdateEye(ref data.blendShapeWeight, ref UnifiedTracking.Data.Eye);
             UpdateEyeExpression(ref data.blendShapeWeight, ref UnifiedTracking.Data.Shapes);
             UpdateExpression(ref data.blendShapeWeight, ref UnifiedTracking.Data.Shapes);
@@ -186,7 +209,9 @@ public class Pico4SAFTExtTrackingModule : ExtTrackingModule
 
     public override void Teardown()
     {
+        //cts.Cancel();
+        udpClient.Client.Blocking = false;
         Logger.LogInformation("Disposing of PxrFaceTracking UDP Client.");
-        udpClient?.Dispose();
+        udpClient.Dispose();
     }
 }
