@@ -44,7 +44,7 @@ public class Pico4SAFTExtTrackingModule : ExtTrackingModule
             Logger.LogDebug("Initialization Timeout: " + udpClient.Client.ReceiveTimeout.ToString() + " ms");
             Logger.LogDebug("Client established: attempting to receive PxrFTInfo.");
 
-            attemptSuccess = RecievePxrData();
+            attemptSuccess = ReceivePxrData();
             Logger.LogDebug("Streaming Assistant handshake success.");
         }
         catch (Exception e)
@@ -65,7 +65,7 @@ public class Pico4SAFTExtTrackingModule : ExtTrackingModule
         {
             while (true)
             {
-                RecievePxrData();
+                ReceivePxrData();
             }
         }, cts.Token);
 
@@ -77,7 +77,7 @@ public class Pico4SAFTExtTrackingModule : ExtTrackingModule
     private static int GetPacketIndex() =>
         hasHeader ? pxrHeaderSize : 0;
 
-    private bool RecievePxrData()
+    private bool ReceivePxrData()
     {
         try
         {
