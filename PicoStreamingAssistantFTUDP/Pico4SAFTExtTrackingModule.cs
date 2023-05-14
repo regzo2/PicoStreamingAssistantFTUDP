@@ -1,38 +1,33 @@
-﻿using Microsoft.Extensions.Logging;
-using System;
-using System.Net;
+﻿using System.Net;
 using System.Net.Sockets;
-using System.Runtime.InteropServices;
+
+using Microsoft.Extensions.Logging;
+
 using VRCFaceTracking;
+using VRCFaceTracking.Core.Library;
 using VRCFaceTracking.Core.Params.Data;
 using VRCFaceTracking.Core.Params.Expressions;
-using VRCFaceTracking.Core.Types;
-using VRCFaceTracking.Core.Library;
-using static Pxr;
 
 namespace Pico4SAFTExtTrackingModule;
 
-public class Pico4SAFTExtTrackingModule : ExtTrackingModule
+public sealed class Pico4SAFTExtTrackingModule : ExtTrackingModule, IDisposable
 {
-    const string IP_ADDRESS = "127.0.0.1";
-    const int PORT_NUMBER = 29763; // Temporary port as of current Pico 4 SA app.
+    private const string IP_ADDRESS = "127.0.0.1";
+    private const int PORT_NUMBER = 29763; // Temporary port as of current Pico 4 SA app.
+    private const bool hasHeader = false;
+    private const int pxrHeaderSize = sizeof(ushort);
+    private const int PacketIndex = hasHeader ? pxrHeaderSize : 0;
+    private static readonly unsafe int pxrFtInfoSize = sizeof(PxrFTInfo);
+    private static readonly int PacketSize = hasHeader ? pxrHeaderSize + pxrFtInfoSize : pxrFtInfoSize;
+    private bool disposedValue;
+    private UdpClient? udpClient;
+    private IPEndPoint? endPoint;
+    private PxrFTInfo data;
 
-    private static UdpClient udpClient = new UdpClient();
-    private static IPEndPoint endPoint;
-    private static CancellationTokenSource cts = new CancellationTokenSource();
-
-    private static byte[] receiveBytes = new byte[GetPacketSize()];
-    private static PxrFTInfo data = new PxrFTInfo();
-
-    private static readonly bool hasHeader = false;
-    private static readonly int pxrHeaderSize = Marshal.SizeOf(typeof(UInt16));
-    private static readonly int pxrFtInfoSize = Marshal.SizeOf(typeof(PxrFTInfo));
-
-    public override (bool SupportsEye, bool SupportsExpression) Supported => (true, true);
+    public override (bool SupportsEye, bool SupportsExpression) Supported { get; } = (true, true);
 
     public override (bool eyeSuccess, bool expressionSuccess) Initialize(bool eyeAvailable, bool expressionAvailable)
     {
-        bool attemptSuccess;
         Logger.LogInformation("Initializing Pico Streaming Assistant data stream.");
         try
         {
@@ -40,79 +35,84 @@ public class Pico4SAFTExtTrackingModule : ExtTrackingModule
             endPoint = new IPEndPoint(IPAddress.Parse(IP_ADDRESS), PORT_NUMBER);
             udpClient.Client.ReceiveTimeout = 15000; // Initialization timeout. 
 
-            Logger.LogDebug("Host end-point: " + endPoint.ToString());
-            Logger.LogDebug("Initialization Timeout: " + udpClient.Client.ReceiveTimeout.ToString() + " ms");
+            Logger.LogDebug("Host end-point: {endPoint}", endPoint);
+            Logger.LogDebug("Initialization Timeout: {timeout}ms", udpClient.Client.ReceiveTimeout);
             Logger.LogDebug("Client established: attempting to receive PxrFTInfo.");
 
-            attemptSuccess = ReceivePxrData();
+            ReceivePxrData();
             Logger.LogDebug("Streaming Assistant handshake success.");
         }
         catch (Exception e)
         {
-            Logger.LogInformation("Module failed to establish a connection. " + e.Message);
+            Logger.LogWarning("Module failed to establish a connection. ");
+            Logger.LogInformation("Tips: Did you forget to run Streaming Assistant?");
+            Logger.LogWarning("{exception}", e);
             Teardown(); // Closes UDP client and any other objects
             return (false, false);
         }
-        
+
         ModuleInformation.Name = "Pico 4 Pro / Enterprise";
 
-        var stream = GetType().Assembly.GetManifestResourceStream("Pico4SAFTExtTrackingModule.Assets.pico-hmd.png");
-        ModuleInformation.StaticImages = stream != null ? new List<Stream> { stream } : ModuleInformation.StaticImages;
+        var stream = typeof(Pico4SAFTExtTrackingModule).Assembly.GetManifestResourceStream("Pico4SAFTExtTrackingModule.Assets.pico-hmd.png");
+        ModuleInformation.StaticImages = stream is not null ? new List<Stream> { stream } : ModuleInformation.StaticImages;
 
         udpClient.Client.ReceiveTimeout = 0;
 
-        Task.Run(() =>
+        _ = Receive();
+
+        Logger.LogInformation("Successed to Initialize.");
+        return (true, true);
+    }
+
+    private async Task Receive(CancellationToken cancellationToken = default)
+    {
+        await Task.Yield();
+        Logger.LogInformation("Receiving.");
+        try
         {
             while (true)
             {
-                ReceivePxrData();
+                try
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    ReceivePxrData();
+                }
+                catch (Exception ex) when (ex is not OperationCanceledException)
+                {
+                    Logger.LogWarning("Unexpected exceptions: {exception}", ex);
+                }
             }
-        }, cts.Token);
-
-        return (attemptSuccess, attemptSuccess);
+        }
+        catch (OperationCanceledException)
+        {
+            Logger.LogInformation("Canceled!");
+        }
     }
 
-    private static int GetPacketSize() => 
-        hasHeader ? pxrHeaderSize + pxrFtInfoSize : pxrFtInfoSize;
-    private static int GetPacketIndex() =>
-        hasHeader ? pxrHeaderSize : 0;
-
-    private bool ReceivePxrData()
+    private void ReceivePxrData()
     {
-        try
+        unsafe
         {
-            receiveBytes = udpClient.Receive(ref endPoint);
-
-            IntPtr ptr = Marshal.AllocHGlobal(GetPacketSize());
-            Marshal.Copy(receiveBytes, GetPacketIndex(), ptr, GetPacketSize());
-            data = (PxrFTInfo)Marshal.PtrToStructure(ptr, typeof(PxrFTInfo));
-
-            Marshal.FreeHGlobal(ptr);
+            fixed (PxrFTInfo* pData = &data)
+            fixed (byte* ptr = udpClient!.Receive(ref endPoint))
+                Buffer.MemoryCopy(ptr + PacketIndex, pData, PacketSize, PacketSize);
         }
-        catch (Exception e)
-        {
-            Logger.LogInformation(e.ToString());
-            return false;
-        }
-
-        return true;
     }
 
-    private static void UpdateEye(ref float[] pxrShape, ref UnifiedEyeData unifiedEye)
+    private static unsafe void UpdateEye(float* pxrShape, UnifiedSingleEyeData* left, UnifiedSingleEyeData* right)
     {
         // to be tested, not entirely sure how Pxr blink/squint will translate to Openness.
-        unifiedEye.Left.Openness = 1f - pxrShape[(int)BlendShapeIndex.EyeBlink_L];
-        unifiedEye.Right.Openness = 1f - pxrShape[(int)BlendShapeIndex.EyeBlink_R];
+        left->Openness = 1f - pxrShape[(int)BlendShapeIndex.EyeBlink_L];
+        right->Openness = 1f - pxrShape[(int)BlendShapeIndex.EyeBlink_R];
 
-        unifiedEye.Left.Gaze = new Vector2(
-            pxrShape[(int)BlendShapeIndex.EyeLookIn_L] - pxrShape[(int)BlendShapeIndex.EyeLookOut_L],
-            pxrShape[(int)BlendShapeIndex.EyeLookUp_L] - pxrShape[(int)BlendShapeIndex.EyeLookDown_L]);
-        unifiedEye.Right.Gaze = new Vector2(
-            pxrShape[(int)BlendShapeIndex.EyeLookOut_R] - pxrShape[(int)BlendShapeIndex.EyeLookIn_R],
-            pxrShape[(int)BlendShapeIndex.EyeLookUp_R] - pxrShape[(int)BlendShapeIndex.EyeLookDown_R]);
+        left->Gaze.x = pxrShape[(int)BlendShapeIndex.EyeLookIn_L] - pxrShape[(int)BlendShapeIndex.EyeLookOut_L];
+        left->Gaze.y = pxrShape[(int)BlendShapeIndex.EyeLookUp_L] - pxrShape[(int)BlendShapeIndex.EyeLookDown_L];
+
+        right->Gaze.x = pxrShape[(int)BlendShapeIndex.EyeLookOut_R] - pxrShape[(int)BlendShapeIndex.EyeLookIn_R];
+        right->Gaze.y = pxrShape[(int)BlendShapeIndex.EyeLookUp_R] - pxrShape[(int)BlendShapeIndex.EyeLookDown_R];
     }
 
-    private static void UpdateEyeExpression(ref float[] pxrShape, ref UnifiedExpressionShape[] unifiedShape)
+    private static unsafe void UpdateEyeExpression(float* pxrShape, UnifiedExpressionShape* unifiedShape)
     {
         #region Brow Shapes
         unifiedShape[(int)UnifiedExpressions.BrowInnerUpLeft].Weight = pxrShape[(int)BlendShapeIndex.BrowInnerUp];
@@ -132,7 +132,7 @@ public class Pico4SAFTExtTrackingModule : ExtTrackingModule
         #endregion
     }
 
-    private static void UpdateExpression(ref float[] pxrShape, ref UnifiedExpressionShape[] unifiedShape)
+    private static unsafe void UpdateExpression(float* pxrShape, UnifiedExpressionShape* unifiedShape)
     {
         // TODO: Map Viseme shapes onto face shapes.
 
@@ -198,20 +198,52 @@ public class Pico4SAFTExtTrackingModule : ExtTrackingModule
 
     public override void Update()
     {
-        Thread.Sleep(10);
-        if (Status == ModuleState.Active)
+        if (Status != ModuleState.Active)
         {
-            UpdateEye(ref data.blendShapeWeight, ref UnifiedTracking.Data.Eye);
-            UpdateEyeExpression(ref data.blendShapeWeight, ref UnifiedTracking.Data.Shapes);
-            UpdateExpression(ref data.blendShapeWeight, ref UnifiedTracking.Data.Shapes);
+            Thread.Sleep(10);
+            return;
+        }
+
+        unsafe
+        {
+            fixed (UnifiedExpressionShape* unifiedShape = UnifiedTracking.Data.Shapes)
+            fixed (UnifiedSingleEyeData* pLeft = &UnifiedTracking.Data.Eye.Left)
+            fixed (UnifiedSingleEyeData* pRight = &UnifiedTracking.Data.Eye.Right)
+            fixed (float* pxrShape = data.blendShapeWeight)
+            {
+                UpdateEye(pxrShape, pLeft, pRight);
+                UpdateEyeExpression(pxrShape, unifiedShape);
+                UpdateExpression(pxrShape, unifiedShape);
+            }
         }
     }
 
-    public override void Teardown()
+    public override void Teardown() => Dispose();
+
+    private void Dispose(bool disposing)
     {
-        //cts.Cancel();
-        udpClient.Client.Blocking = false;
-        Logger.LogInformation("Disposing of PxrFaceTracking UDP Client.");
-        udpClient.Dispose();
+        if (!disposedValue)
+        {
+            if (disposing)
+            {
+                if (udpClient is not null)
+                    udpClient.Client.Blocking = false;
+                Logger.LogInformation("Disposing of PxrFaceTracking UDP Client.");
+                udpClient?.Dispose();
+            }
+
+            disposedValue = true;
+        }
+    }
+
+    // ~Pico4SAFTExtTrackingModule()
+    // {
+    //     Dispose(disposing: false);
+    // }
+
+    public void Dispose()
+    {
+        Dispose(disposing: true);
+        GC.SuppressFinalize(this);
     }
 }
