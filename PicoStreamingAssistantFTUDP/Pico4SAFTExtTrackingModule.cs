@@ -1,4 +1,5 @@
-﻿using System.Net;
+﻿using System.Diagnostics;
+using System.Net;
 using System.Net.Sockets;
 
 using Microsoft.Extensions.Logging;
@@ -28,12 +29,22 @@ public sealed class Pico4SAFTExtTrackingModule : ExtTrackingModule, IDisposable
 
     public override (bool eyeSuccess, bool expressionSuccess) Initialize(bool eyeAvailable, bool expressionAvailable)
     {
+        int retry = 0;
         Logger.LogInformation("Initializing Pico Streaming Assistant data stream.");
+        if (Process.GetProcessesByName("Streaming Assistant").Length is 0)
+        {
+            Logger.LogError("Cannot found process \"Streaming Assistant\". You should run it before VRCFT.");
+            return (false, false);
+        }
+    ReInitialize:
         try
         {
             udpClient = new UdpClient(PORT_NUMBER);
             endPoint = new IPEndPoint(IPAddress.Parse(IP_ADDRESS), PORT_NUMBER);
-            udpClient.Client.ReceiveTimeout = 15000; // Initialization timeout. 
+            // Since Streaming Assistant is already running, 
+            // this module is indeed needed, 
+            // so the timeout failure is unnecessary.
+            // udpClient.Client.ReceiveTimeout = 15000; // Initialization timeout. 
 
             Logger.LogDebug("Host end-point: {endPoint}", endPoint);
             Logger.LogDebug("Initialization Timeout: {timeout}ms", udpClient.Client.ReceiveTimeout);
@@ -41,6 +52,31 @@ public sealed class Pico4SAFTExtTrackingModule : ExtTrackingModule, IDisposable
 
             ReceivePxrData();
             Logger.LogDebug("Streaming Assistant handshake success.");
+        }
+        catch (SocketException ex) when (ex.ErrorCode is 10048)
+        {
+            if (retry >= 3)
+                return (false, false);
+            retry++;
+            // Magic
+            // Close the pico_et_ft_bt_bridge.exe process and reinitialize it.
+            // It will listen to UDP port 29763 before pico_et_ft_bt_bridge.exe runs.
+            Process proc = new()
+            {
+                StartInfo = {
+                    FileName = "taskkill.exe",
+                    ArgumentList = {
+                        "/f",
+                        "/t",
+                        "/im",
+                        "pico_et_ft_bt_bridge.exe"
+                    },
+                    CreateNoWindow = true
+                }
+            };
+            proc.Start();
+            proc.WaitForExit();
+            goto ReInitialize;
         }
         catch (Exception e)
         {
