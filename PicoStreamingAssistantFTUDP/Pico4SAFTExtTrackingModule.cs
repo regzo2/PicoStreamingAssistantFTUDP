@@ -50,6 +50,7 @@ public sealed class Pico4SAFTExtTrackingModule : ExtTrackingModule, IDisposable
             Logger.LogDebug("Initialization Timeout: {timeout}ms", udpClient.Client.ReceiveTimeout);
             Logger.LogDebug("Client established: attempting to receive PxrFTInfo.");
 
+            Logger.LogInformation("Waiting data from Streaming Assistant.");
             ReceivePxrData();
             Logger.LogDebug("Streaming Assistant handshake success.");
         }
