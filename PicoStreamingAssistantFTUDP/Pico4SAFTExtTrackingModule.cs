@@ -41,17 +41,21 @@ public sealed class Pico4SAFTExtTrackingModule : ExtTrackingModule, IDisposable
         {
             udpClient = new UdpClient(PORT_NUMBER);
             endPoint = new IPEndPoint(IPAddress.Parse(IP_ADDRESS), PORT_NUMBER);
-            // Since Streaming Assistant is already running, 
-            // this module is indeed needed, 
+            // Since Streaming Assistant is already running,
+            // this module is indeed needed,
             // so the timeout failure is unnecessary.
-            // udpClient.Client.ReceiveTimeout = 15000; // Initialization timeout. 
+            // udpClient.Client.ReceiveTimeout = 15000; // Initialization timeout.
 
             Logger.LogDebug("Host end-point: {endPoint}", endPoint);
             Logger.LogDebug("Initialization Timeout: {timeout}ms", udpClient.Client.ReceiveTimeout);
             Logger.LogDebug("Client established: attempting to receive PxrFTInfo.");
 
             Logger.LogInformation("Waiting data from Streaming Assistant.");
-            ReceivePxrData();
+            unsafe
+            {
+                fixed (PxrFTInfo* pData = &data)
+                    ReceivePxrData(pData);
+            }
             Logger.LogDebug("Streaming Assistant handshake success.");
         }
         catch (SocketException ex) when (ex.ErrorCode is 10048)
@@ -95,45 +99,15 @@ public sealed class Pico4SAFTExtTrackingModule : ExtTrackingModule, IDisposable
 
         udpClient.Client.ReceiveTimeout = 0;
 
-        _ = Receive();
 
         Logger.LogInformation("Successed to Initialize.");
         return (true, true);
     }
 
-    private async Task Receive(CancellationToken cancellationToken = default)
+    private unsafe void ReceivePxrData(PxrFTInfo* pData)
     {
-        await Task.Yield();
-        Logger.LogInformation("Receiving.");
-        try
-        {
-            while (true)
-            {
-                try
-                {
-                    cancellationToken.ThrowIfCancellationRequested();
-                    ReceivePxrData();
-                }
-                catch (Exception ex) when (ex is not OperationCanceledException)
-                {
-                    Logger.LogWarning("Unexpected exceptions: {exception}", ex);
-                }
-            }
-        }
-        catch (OperationCanceledException)
-        {
-            Logger.LogInformation("Canceled!");
-        }
-    }
-
-    private void ReceivePxrData()
-    {
-        unsafe
-        {
-            fixed (PxrFTInfo* pData = &data)
-            fixed (byte* ptr = udpClient!.Receive(ref endPoint))
-                Buffer.MemoryCopy(ptr + PacketIndex, pData, PacketSize, PacketSize);
-        }
+        fixed (byte* ptr = udpClient!.Receive(ref endPoint))
+            Buffer.MemoryCopy(ptr + PacketIndex, pData, PacketSize, PacketSize);
     }
 
     private static unsafe void UpdateEye(float* pxrShape, UnifiedSingleEyeData* left, UnifiedSingleEyeData* right)
@@ -241,17 +215,26 @@ public sealed class Pico4SAFTExtTrackingModule : ExtTrackingModule, IDisposable
             return;
         }
 
-        unsafe
+        try
         {
-            fixed (UnifiedExpressionShape* unifiedShape = UnifiedTracking.Data.Shapes)
-            fixed (UnifiedSingleEyeData* pLeft = &UnifiedTracking.Data.Eye.Left)
-            fixed (UnifiedSingleEyeData* pRight = &UnifiedTracking.Data.Eye.Right)
-            fixed (float* pxrShape = data.blendShapeWeight)
+            unsafe
             {
-                UpdateEye(pxrShape, pLeft, pRight);
-                UpdateEyeExpression(pxrShape, unifiedShape);
-                UpdateExpression(pxrShape, unifiedShape);
+                fixed (PxrFTInfo* pData = &data)
+                fixed (UnifiedExpressionShape* unifiedShape = UnifiedTracking.Data.Shapes)
+                fixed (UnifiedSingleEyeData* pLeft = &UnifiedTracking.Data.Eye.Left)
+                fixed (UnifiedSingleEyeData* pRight = &UnifiedTracking.Data.Eye.Right)
+                {
+                    ReceivePxrData(pData);
+                    float* pxrShape = pData->blendShapeWeight;
+                    UpdateEye(pxrShape, pLeft, pRight);
+                    UpdateEyeExpression(pxrShape, unifiedShape);
+                    UpdateExpression(pxrShape, unifiedShape);
+                }
             }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning("Unexpected exceptions: {exception}", ex);
         }
     }
 
