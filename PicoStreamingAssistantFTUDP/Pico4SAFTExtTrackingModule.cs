@@ -97,8 +97,7 @@ public sealed class Pico4SAFTExtTrackingModule : ExtTrackingModule, IDisposable
         var stream = typeof(Pico4SAFTExtTrackingModule).Assembly.GetManifestResourceStream("Pico4SAFTExtTrackingModule.Assets.pico-hmd.png");
         ModuleInformation.StaticImages = stream is not null ? new List<Stream> { stream } : ModuleInformation.StaticImages;
 
-        udpClient.Client.ReceiveTimeout = 0;
-
+        udpClient.Client.ReceiveTimeout = 5000;
 
         Logger.LogInformation("Successed to Initialize.");
         return (true, true);
