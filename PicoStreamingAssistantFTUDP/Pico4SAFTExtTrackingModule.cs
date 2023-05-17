@@ -27,15 +27,25 @@ public sealed class Pico4SAFTExtTrackingModule : ExtTrackingModule, IDisposable
 
     public override (bool SupportsEye, bool SupportsExpression) Supported { get; } = (true, true);
 
-    public override (bool eyeSuccess, bool expressionSuccess) Initialize(bool eyeAvailable, bool expressionAvailable)
+    private bool StreamerValidity()
     {
         int retry = 0;
         Logger.LogInformation("Initializing Pico Streaming Assistant data stream.");
         if (Process.GetProcessesByName("Streaming Assistant").Length is 0)
         {
             Logger.LogError("Cannot found process \"Streaming Assistant\". You should run it before VRCFT.");
-            return (false, false);
+            return false;
         }
+        return true;
+    }
+
+    public override (bool eyeSuccess, bool expressionSuccess) Initialize(bool eyeAvailable, bool expressionAvailable)
+    {
+        int retry = 0;
+        if (!StreamerValidity())
+            return (false, false);
+        Logger.LogInformation("Initializing Pico Streaming Assistant data stream.");
+
     ReInitialize:
         try
         {
@@ -230,6 +240,12 @@ public sealed class Pico4SAFTExtTrackingModule : ExtTrackingModule, IDisposable
                     UpdateExpression(pxrShape, unifiedShape);
                 }
             }
+        }
+        catch (SocketException ex) when (ex.ErrorCode is 10060)
+        {
+            if (!StreamerValidity())
+                Logger.LogInformation("Streaming Assistant is not active. Please rerun the Streaming Assistant to send tracking data.");
+            Logger.LogDebug("Data was not sent within the timeout. {msg}", ex.Message);
         }
         catch (Exception ex)
         {
