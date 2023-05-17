@@ -31,7 +31,7 @@ public sealed class Pico4SAFTExtTrackingModule : ExtTrackingModule, IDisposable
     {
         if (Process.GetProcessesByName("Streaming Assistant").Length is 0)
         {
-            Logger.LogError("Cannot found process \"Streaming Assistant\". You should run it before VRCFT.");
+            Logger.LogError("Cannot find process \"Streaming Assistant\". Please run the Streaming Assistant before VRCFT.");
             return false;
         }
         return true;
@@ -43,7 +43,6 @@ public sealed class Pico4SAFTExtTrackingModule : ExtTrackingModule, IDisposable
         if (!StreamerValidity())
             return (false, false);
         Logger.LogInformation("Initializing Pico Streaming Assistant data stream.");
-
     ReInitialize:
         try
         {
@@ -93,8 +92,8 @@ public sealed class Pico4SAFTExtTrackingModule : ExtTrackingModule, IDisposable
         }
         catch (Exception e)
         {
-            Logger.LogWarning("Module failed to establish a connection. ");
-            Logger.LogInformation("Tips: Did you forget to run Streaming Assistant?");
+            Logger.LogWarning("Module failed to establish a connection.");
+            Logger.LogInformation("Tip: Did you forget to run Streaming Assistant?");
             Logger.LogWarning("{exception}", e);
             Teardown(); // Closes UDP client and any other objects
             return (false, false);
@@ -107,7 +106,6 @@ public sealed class Pico4SAFTExtTrackingModule : ExtTrackingModule, IDisposable
 
         udpClient.Client.ReceiveTimeout = 5000;
 
-        Logger.LogInformation("Successed to Initialize.");
         return (true, true);
     }
 
@@ -242,7 +240,7 @@ public sealed class Pico4SAFTExtTrackingModule : ExtTrackingModule, IDisposable
         catch (SocketException ex) when (ex.ErrorCode is 10060)
         {
             if (!StreamerValidity())
-                Logger.LogInformation("Streaming Assistant is not active. Please rerun the Streaming Assistant to send tracking data.");
+                Logger.LogInformation("Streaming Assistant is currently not running. Please ensure the Streaming Assistant is running to send tracking data.");
             Logger.LogDebug("Data was not sent within the timeout. {msg}", ex.Message);
         }
         catch (Exception ex)
