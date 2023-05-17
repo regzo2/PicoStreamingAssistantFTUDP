@@ -29,8 +29,6 @@ public sealed class Pico4SAFTExtTrackingModule : ExtTrackingModule, IDisposable
 
     private bool StreamerValidity()
     {
-        int retry = 0;
-        Logger.LogInformation("Initializing Pico Streaming Assistant data stream.");
         if (Process.GetProcessesByName("Streaming Assistant").Length is 0)
         {
             Logger.LogError("Cannot found process \"Streaming Assistant\". You should run it before VRCFT.");
