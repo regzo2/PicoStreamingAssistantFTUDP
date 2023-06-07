@@ -1,0 +1,16 @@
+{
+  "ModuleId": "4d885bd8-e97f-4e0d-be40-55c8503e0620",
+  "AuthorName": "Mitchell Taylor",
+  "DllFileName": "Pico4SAFTExtTrackingModule.dll",
+  "Downloads": 16,
+  "DownloadUrl": "https://github.com/regzo2/PicoStreamingAssistantFTUDP/releases/download/1.2.0/Pico4ProModule.zip",
+  "LastUpdated": "2023-04-20T01:08:01Z",
+  "ModuleDescription": "The module provides eye and face tracking compatibility with the Pico Steaming Assistant.",
+  "ModuleName": "Pico4SAFTExtTrackingModule",
+  "ModulePageUrl": "https://github.com/regzo2/PicoStreamingAssistantFTUDP/tree/vrcfacetracking-module",
+  "Rating": 0,
+  "Ratings": 0,
+  "RatingSum": 0,
+  "UsageInstructions": "REQUIRES THE LATEST (currently unreleased) STREAMING ASSISTANT. This module will listen for any face tracking data coming from the Pico Streaming Assistant.",
+  "Version": "1.2"
+}
