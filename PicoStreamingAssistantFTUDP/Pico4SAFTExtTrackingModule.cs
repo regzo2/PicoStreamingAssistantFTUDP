@@ -25,8 +25,8 @@ public sealed class Pico4SAFTExtTrackingModule : ExtTrackingModule, IDisposable
     private IPEndPoint? endPoint;
     private PxrFTInfo data;
 
-    private const bool FILE_LOG = true;
-    public static readonly string LOGGER_PATH = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "PICOLogs.csv");
+    private const bool FILE_LOG = false;
+    public static readonly string LOGGER_PATH = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "VRCFaceTracking\\PICOLogs.csv");
     private Logger<PxrFTInfo> logger;
 
     public override (bool SupportsEye, bool SupportsExpression) Supported { get; } = (true, true);
@@ -72,7 +72,7 @@ public sealed class Pico4SAFTExtTrackingModule : ExtTrackingModule, IDisposable
             if (FILE_LOG)
             {
                 this.logger = PicoDataLoggerFactory.build(LOGGER_PATH);
-                Logger.LogDebug("Using {} path for PICO logs.", LOGGER_PATH);
+                Logger.LogInformation("Using {} path for PICO logs.", LOGGER_PATH);
             }
         }
         catch (SocketException ex) when (ex.ErrorCode is 10048)
