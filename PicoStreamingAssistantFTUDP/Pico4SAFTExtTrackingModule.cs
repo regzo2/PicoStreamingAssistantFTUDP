@@ -14,12 +14,11 @@ namespace Pico4SAFTExtTrackingModule;
 public sealed class Pico4SAFTExtTrackingModule : ExtTrackingModule, IDisposable
 {
     private const string IP_ADDRESS = "127.0.0.1";
-    private const int PORT_NUMBER = 29763; // Temporary port as of current Pico 4 SA app.
-    private const bool hasHeader = false;
-    private const int pxrHeaderSize = sizeof(ushort);
-    private const int PacketIndex = hasHeader ? pxrHeaderSize : 0;
+    private const int PORT_NUMBER = 29765;
+    private static readonly unsafe int pxrHeaderSize = sizeof(TrackingDataHeader);
+    private readonly int PacketIndex = pxrHeaderSize;
     private static readonly unsafe int pxrFtInfoSize = sizeof(PxrFTInfo);
-    private static readonly int PacketSize = hasHeader ? pxrHeaderSize + pxrFtInfoSize : pxrFtInfoSize;
+    private static readonly int PacketSize = pxrHeaderSize + pxrFtInfoSize;
     private bool disposedValue;
     private UdpClient? udpClient;
     private IPEndPoint? endPoint;
@@ -122,7 +121,7 @@ public sealed class Pico4SAFTExtTrackingModule : ExtTrackingModule, IDisposable
     private unsafe void ReceivePxrData(PxrFTInfo* pData)
     {
         fixed (byte* ptr = udpClient!.Receive(ref endPoint))
-            Buffer.MemoryCopy(ptr + PacketIndex, pData, PacketSize, PacketSize);
+            Buffer.MemoryCopy(ptr + PacketIndex, pData, pxrFtInfoSize, pxrFtInfoSize); // `PacketSize` is how many bytes we have in `ptr`, but as we're offsetting the pointer we don't want to copy them all
     }
 
     private static unsafe void UpdateEye(float* pxrShape, UnifiedSingleEyeData* left, UnifiedSingleEyeData* right)

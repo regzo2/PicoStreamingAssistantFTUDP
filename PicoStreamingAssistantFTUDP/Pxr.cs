@@ -1,4 +1,5 @@
-﻿using System.Runtime.InteropServices;
+﻿using System;
+using System.Runtime.InteropServices;
 
 namespace Pico4SAFTExtTrackingModule;
 
@@ -81,6 +82,19 @@ public enum BlendShapeIndex
     E = 69,
     nn = 70,
     sil = 71
+};
+
+[StructLayout(LayoutKind.Sequential, Pack = 1)]
+public struct TrackingDataHeader
+{
+    Byte start_code1;
+    Byte start_code2;
+    Byte tracking_type;
+    Byte sub_type;
+    Byte multi_packet;
+    Byte current_packet_index;
+    ushort version;
+    ulong timestamp;
 };
 
 [StructLayout(LayoutKind.Sequential, Pack = 1)]
