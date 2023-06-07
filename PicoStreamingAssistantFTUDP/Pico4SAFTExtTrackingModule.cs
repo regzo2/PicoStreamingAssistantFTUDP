@@ -118,10 +118,17 @@ public sealed class Pico4SAFTExtTrackingModule : ExtTrackingModule, IDisposable
         return (true, true);
     }
 
-    private unsafe void ReceivePxrData(PxrFTInfo* pData)
+    private unsafe bool ReceivePxrData(PxrFTInfo* pData)
     {
         fixed (byte* ptr = udpClient!.Receive(ref endPoint))
-            Buffer.MemoryCopy(ptr + PacketIndex, pData, pxrFtInfoSize, pxrFtInfoSize); // `PacketSize` is how many bytes we have in `ptr`, but as we're offsetting the pointer we don't want to copy them all
+        {
+            TrackingDataHeader tdh;
+            Buffer.MemoryCopy(ptr, &tdh, pxrHeaderSize, pxrHeaderSize);
+            if (tdh.tracking_type != 2) return false; // not facetracking packet
+
+            Buffer.MemoryCopy(ptr + PacketIndex, pData, pxrFtInfoSize, pxrFtInfoSize);
+        }
+        return true;
     }
 
     private static unsafe void UpdateEye(float* pxrShape, UnifiedSingleEyeData* left, UnifiedSingleEyeData* right)
@@ -238,14 +245,15 @@ public sealed class Pico4SAFTExtTrackingModule : ExtTrackingModule, IDisposable
                 fixed (UnifiedSingleEyeData* pLeft = &UnifiedTracking.Data.Eye.Left)
                 fixed (UnifiedSingleEyeData* pRight = &UnifiedTracking.Data.Eye.Right)
                 {
-                    ReceivePxrData(pData);
+                    if (ReceivePxrData(pData))
+                    {
+                        if (this.logger != null) this.logger.UpdateValue(pData);
 
-                    if (this.logger != null) this.logger.UpdateValue(pData);
-
-                    float* pxrShape = pData->blendShapeWeight;
-                    UpdateEye(pxrShape, pLeft, pRight);
-                    UpdateEyeExpression(pxrShape, unifiedShape);
-                    UpdateExpression(pxrShape, unifiedShape);
+                        float* pxrShape = pData->blendShapeWeight;
+                        UpdateEye(pxrShape, pLeft, pRight);
+                        UpdateEyeExpression(pxrShape, unifiedShape);
+                        UpdateExpression(pxrShape, unifiedShape);
+                    }
                 }
             }
         }
