@@ -21,7 +21,7 @@
 
 Make sure that your Pico 4 device is capable of using face tracking. 
 At this time only the Pico 4 Pro is capable of being used with this module.
-Make sure you have the (unreleased) latest Streaming Assistant capable of sending 
+Make sure you have the latest Streaming Assistant capable of sending 
 face tracking data.
 
   
@@ -29,6 +29,19 @@ face tracking data.
 
 **(TBD)**.
 
+## Compiling this module
+- Use [Visual Studio 2022](https://visualstudio.microsoft.com/es/vs/)
+- Clone [VRCFaceTracking](https://github.com/benaclejames/VRCFaceTracking) in the same folder as this project
+- Compile VRCFaceTracking.Core
+
+You'll find the module in `PicoStreamingAssistantFTUDP\PicoStreamingAssistantFTUDP\bin\Debug\net7.0\Pico4SAFTExtTrackingModule.dll`.
+
+#### Compiling VRCFaceTracking.Core
+
+- If you get an error about `vcruntime140.dll`, modify (in the file `VRCFaceTracking\VRCFaceTracking.Core\VRCFaceTracking.Core.csproj`) the reference to `C:\Windows\System32\vcruntime140.dll`
+- If you get an error about `fti_osc.dll`, modify (in the file `VRCFaceTracking\VRCFaceTracking.Core\VRCFaceTracking.Core.csproj`) the reference to ? (I just removed it lmao)
+
 ## Credits
 - [Ben](https://github.com/benaclejames/) for VRCFaceTracking!
 - [TofuLemon](https://github.com/ULemon/) with help testing, troubleshooting and providing crucial information that lead to the development of this module!
+- [rogermiranda1000](https://github.com/rogermiranda1000) for updating to the latest SA protocol.
