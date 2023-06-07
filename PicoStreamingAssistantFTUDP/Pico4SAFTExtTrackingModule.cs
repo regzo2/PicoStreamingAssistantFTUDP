@@ -25,6 +25,10 @@ public sealed class Pico4SAFTExtTrackingModule : ExtTrackingModule, IDisposable
     private IPEndPoint? endPoint;
     private PxrFTInfo data;
 
+    private const bool FILE_LOG = true;
+    public static readonly string LOGGER_PATH = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "PICOLogs.csv");
+    private Logger<PxrFTInfo> logger;
+
     public override (bool SupportsEye, bool SupportsExpression) Supported { get; } = (true, true);
 
     private bool StreamerValidity()
@@ -64,6 +68,12 @@ public sealed class Pico4SAFTExtTrackingModule : ExtTrackingModule, IDisposable
                     ReceivePxrData(pData);
             }
             Logger.LogDebug("Streaming Assistant handshake success.");
+
+            if (FILE_LOG)
+            {
+                this.logger = PicoDataLoggerFactory.build(LOGGER_PATH);
+                Logger.LogDebug("Using {} path for PICO logs.", LOGGER_PATH);
+            }
         }
         catch (SocketException ex) when (ex.ErrorCode is 10048)
         {
@@ -230,6 +240,9 @@ public sealed class Pico4SAFTExtTrackingModule : ExtTrackingModule, IDisposable
                 fixed (UnifiedSingleEyeData* pRight = &UnifiedTracking.Data.Eye.Right)
                 {
                     ReceivePxrData(pData);
+
+                    if (this.logger != null) this.logger.UpdateValue(pData);
+
                     float* pxrShape = pData->blendShapeWeight;
                     UpdateEye(pxrShape, pLeft, pRight);
                     UpdateEyeExpression(pxrShape, unifiedShape);
@@ -261,6 +274,12 @@ public sealed class Pico4SAFTExtTrackingModule : ExtTrackingModule, IDisposable
                     udpClient.Client.Blocking = false;
                 Logger.LogInformation("Disposing of PxrFaceTracking UDP Client.");
                 udpClient?.Dispose();
+
+                if (this.logger != null)
+                {
+                    this.logger.Dispose();
+                    this.logger = null;
+                }
             }
 
             disposedValue = true;
