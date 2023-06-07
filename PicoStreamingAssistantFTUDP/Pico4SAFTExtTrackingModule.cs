@@ -14,12 +14,11 @@ namespace Pico4SAFTExtTrackingModule;
 public sealed class Pico4SAFTExtTrackingModule : ExtTrackingModule, IDisposable
 {
     private const string IP_ADDRESS = "127.0.0.1";
-    private const int PORT_NUMBER = 29763; // Temporary port as of current Pico 4 SA app.
-    private const bool hasHeader = false;
-    private const int pxrHeaderSize = sizeof(ushort);
-    private const int PacketIndex = hasHeader ? pxrHeaderSize : 0;
+    private const int PORT_NUMBER = 29765;
+    private static readonly unsafe int pxrHeaderSize = sizeof(TrackingDataHeader);
+    private readonly int PacketIndex = pxrHeaderSize;
     private static readonly unsafe int pxrFtInfoSize = sizeof(PxrFTInfo);
-    private static readonly int PacketSize = hasHeader ? pxrHeaderSize + pxrFtInfoSize : pxrFtInfoSize;
+    private static readonly int PacketSize = pxrHeaderSize + pxrFtInfoSize;
     private bool disposedValue;
     private UdpClient? udpClient;
     private IPEndPoint? endPoint;
@@ -119,10 +118,17 @@ public sealed class Pico4SAFTExtTrackingModule : ExtTrackingModule, IDisposable
         return (true, true);
     }
 
-    private unsafe void ReceivePxrData(PxrFTInfo* pData)
+    private unsafe bool ReceivePxrData(PxrFTInfo* pData)
     {
         fixed (byte* ptr = udpClient!.Receive(ref endPoint))
-            Buffer.MemoryCopy(ptr + PacketIndex, pData, PacketSize, PacketSize);
+        {
+            TrackingDataHeader tdh;
+            Buffer.MemoryCopy(ptr, &tdh, pxrHeaderSize, pxrHeaderSize);
+            if (tdh.tracking_type != 2) return false; // not facetracking packet
+
+            Buffer.MemoryCopy(ptr + PacketIndex, pData, pxrFtInfoSize, pxrFtInfoSize);
+        }
+        return true;
     }
 
     private static unsafe void UpdateEye(float* pxrShape, UnifiedSingleEyeData* left, UnifiedSingleEyeData* right)
@@ -239,14 +245,15 @@ public sealed class Pico4SAFTExtTrackingModule : ExtTrackingModule, IDisposable
                 fixed (UnifiedSingleEyeData* pLeft = &UnifiedTracking.Data.Eye.Left)
                 fixed (UnifiedSingleEyeData* pRight = &UnifiedTracking.Data.Eye.Right)
                 {
-                    ReceivePxrData(pData);
+                    if (ReceivePxrData(pData))
+                    {
+                        if (this.logger != null) this.logger.UpdateValue(pData);
 
-                    if (this.logger != null) this.logger.UpdateValue(pData);
-
-                    float* pxrShape = pData->blendShapeWeight;
-                    UpdateEye(pxrShape, pLeft, pRight);
-                    UpdateEyeExpression(pxrShape, unifiedShape);
-                    UpdateExpression(pxrShape, unifiedShape);
+                        float* pxrShape = pData->blendShapeWeight;
+                        UpdateEye(pxrShape, pLeft, pRight);
+                        UpdateEyeExpression(pxrShape, unifiedShape);
+                        UpdateExpression(pxrShape, unifiedShape);
+                    }
                 }
             }
         }
