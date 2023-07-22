@@ -253,27 +253,27 @@ public sealed class Pico4SAFTExtTrackingModule : ExtTrackingModule, IDisposable
             unsafe
             {
                 fixed (PxrFTInfo* pData = &data)
-                if (ReceivePxrData(pData))
-                {
-                    float* pxrShape = pData->blendShapeWeight;
-                    if (this.logger != null) this.logger.UpdateValue(pData);
-
-                    fixed (UnifiedExpressionShape* unifiedShape = UnifiedTracking.Data.Shapes)
+                    if (ReceivePxrData(pData))
                     {
-                        if (trackingState.Item1)
-                        {
-                            fixed (UnifiedSingleEyeData* pLeft = &UnifiedTracking.Data.Eye.Left)
-                            fixed (UnifiedSingleEyeData* pRight = &UnifiedTracking.Data.Eye.Right)
-                            {
-                                UpdateEye(pxrShape, pLeft, pRight);
-                                UpdateEyeExpression(pxrShape, unifiedShape);
-                            }
-                        }
+                        float* pxrShape = pData->blendShapeWeight;
+                        if (this.logger != null) this.logger.UpdateValue(pData);
 
-                        if (trackingState.Item2) 
-                            UpdateExpression(pxrShape, unifiedShape);
+                        fixed (UnifiedExpressionShape* unifiedShape = UnifiedTracking.Data.Shapes)
+                        {
+                            if (trackingState.Item1)
+                            {
+                                fixed (UnifiedSingleEyeData* pLeft = &UnifiedTracking.Data.Eye.Left)
+                                fixed (UnifiedSingleEyeData* pRight = &UnifiedTracking.Data.Eye.Right)
+                                {
+                                    UpdateEye(pxrShape, pLeft, pRight);
+                                    UpdateEyeExpression(pxrShape, unifiedShape);
+                                }
+                            }
+
+                            if (trackingState.Item2) 
+                                UpdateExpression(pxrShape, unifiedShape);
+                        }
                     }
-                }
             }
         }
         catch (SocketException ex) when (ex.ErrorCode is 10060)
