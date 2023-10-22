@@ -23,6 +23,7 @@ public sealed class Pico4SAFTExtTrackingModule : ExtTrackingModule, IDisposable
     private UdpClient? udpClient;
     private IPEndPoint? endPoint;
     private PxrFTInfo data;
+    private (bool, bool) trackingState = (false, false);
 
     private const bool FILE_LOG = false;
     public static readonly string LOGGER_PATH = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "VRCFaceTracking\\PICOLogs.csv");
@@ -42,9 +43,13 @@ public sealed class Pico4SAFTExtTrackingModule : ExtTrackingModule, IDisposable
 
     public override (bool eyeSuccess, bool expressionSuccess) Initialize(bool eyeAvailable, bool expressionAvailable)
     {
+        trackingState = (eyeAvailable, expressionAvailable);
         int retry = 0;
-        if (!StreamerValidity())
+        if (!StreamerValidity() || !eyeAvailable && !expressionAvailable)
+        {
+            Logger.LogWarning("No data is usable, skipping initialization.");
             return (false, false);
+        }
         Logger.LogInformation("Initializing Streaming Assistant data stream.");
     ReInitialize:
         try
@@ -82,6 +87,8 @@ public sealed class Pico4SAFTExtTrackingModule : ExtTrackingModule, IDisposable
             // Magic
             // Close the pico_et_ft_bt_bridge.exe process and reinitialize it.
             // It will listen to UDP port 29763 before pico_et_ft_bt_bridge.exe runs.
+            // Note: exclusively to simplify older versions of the FT bridge,
+            // the bridge now works without any need for process killing.
             Process proc = new()
             {
                 StartInfo = {
@@ -115,7 +122,12 @@ public sealed class Pico4SAFTExtTrackingModule : ExtTrackingModule, IDisposable
 
         udpClient.Client.ReceiveTimeout = 5000;
 
-        return (true, true);
+        if (!trackingState.Item1)
+            Logger.LogInformation("Eye tracking already in use, disabling eye data."); 
+        if (!trackingState.Item2) 
+            Logger.LogInformation("Expression Tracking already in use, disabling expression data.");
+
+        return trackingState;
     }
 
     private unsafe bool ReceivePxrData(PxrFTInfo* pData)
@@ -241,20 +253,27 @@ public sealed class Pico4SAFTExtTrackingModule : ExtTrackingModule, IDisposable
             unsafe
             {
                 fixed (PxrFTInfo* pData = &data)
-                fixed (UnifiedExpressionShape* unifiedShape = UnifiedTracking.Data.Shapes)
-                fixed (UnifiedSingleEyeData* pLeft = &UnifiedTracking.Data.Eye.Left)
-                fixed (UnifiedSingleEyeData* pRight = &UnifiedTracking.Data.Eye.Right)
-                {
                     if (ReceivePxrData(pData))
                     {
+                        float* pxrShape = pData->blendShapeWeight;
                         if (this.logger != null) this.logger.UpdateValue(pData);
 
-                        float* pxrShape = pData->blendShapeWeight;
-                        UpdateEye(pxrShape, pLeft, pRight);
-                        UpdateEyeExpression(pxrShape, unifiedShape);
-                        UpdateExpression(pxrShape, unifiedShape);
+                        fixed (UnifiedExpressionShape* unifiedShape = UnifiedTracking.Data.Shapes)
+                        {
+                            if (trackingState.Item1)
+                            {
+                                fixed (UnifiedSingleEyeData* pLeft = &UnifiedTracking.Data.Eye.Left)
+                                fixed (UnifiedSingleEyeData* pRight = &UnifiedTracking.Data.Eye.Right)
+                                {
+                                    UpdateEye(pxrShape, pLeft, pRight);
+                                    UpdateEyeExpression(pxrShape, unifiedShape);
+                                }
+                            }
+
+                            if (trackingState.Item2) 
+                                UpdateExpression(pxrShape, unifiedShape);
+                        }
                     }
-                }
             }
         }
         catch (SocketException ex) when (ex.ErrorCode is 10060)
