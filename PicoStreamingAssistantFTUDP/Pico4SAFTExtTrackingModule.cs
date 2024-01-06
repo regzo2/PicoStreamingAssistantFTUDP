@@ -33,7 +33,7 @@ public sealed class Pico4SAFTExtTrackingModule : ExtTrackingModule, IDisposable
 
     private bool StreamerValidity()
     {
-        if (Process.GetProcessesByName("Streaming Assistant").Length is 0)
+        if (Process.GetProcessesByName("Streaming Assistant").Length is 0 && Process.GetProcessesByName("PICO Connect").Length is 0)
         {
             Logger.LogError("\"Streaming Assistant\" process was not found. Please run the Streaming Assistant before VRCFaceTracking.");
             return false;
