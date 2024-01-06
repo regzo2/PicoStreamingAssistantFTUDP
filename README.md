@@ -1,4 +1,4 @@
-# English || [简体中文](https://github.com/lonelyicer/PicoConnectFTUDP/blob/vrcfacetracking-module/README_CN.md)
+## English || [简体中文](https://github.com/regzo2/PicoStreamingAssistantFTUDP/blob/vrcfacetracking-module/README_CN.md)
 
 # VRCFaceTracking - Pico 4 Pro Module
 

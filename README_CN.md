@@ -1,4 +1,4 @@
-# [English](https://github.com/lonelyicer/PicoConnectFTUDP/blob/vrcfacetracking-module/README.md) || 简体中文
+## [English](https://github.com/regzo2/PicoStreamingAssistantFTUDP/blob/vrcfacetracking-module/README.md) || 简体中文
 
 # VRC面部追踪- Pico 4 Pro 模块
 
@@ -12,7 +12,8 @@
   * 安装器
     * 通过 VRCFaceTracking 的 **官方模块库** 页面安装 **Pico 4 Pro 模块** 。
   * 手动
-    * 将 **.dll** 后缀的文件放入 `%appdata%/VRCFaceTracking/CustomLibs`. 
+    * 将 **.dll** 后缀的文件放入 `%appdata%/VRCFaceTracking/CustomLibs`。
+
 **要使用 Pico 4 Pro 模块，你需要确保你的 VRCFaceTracking 版本在 5.0.0.0 以上**
 
 3. 启动 VRCFaceTracking!
