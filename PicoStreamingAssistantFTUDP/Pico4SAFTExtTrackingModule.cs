@@ -35,7 +35,7 @@ public sealed class Pico4SAFTExtTrackingModule : ExtTrackingModule, IDisposable
     {
         if (Process.GetProcessesByName("Streaming Assistant").Length is 0 && Process.GetProcessesByName("PICO Connect").Length is 0)
         {
-            Logger.LogError("\"Streaming Assistant\" process was not found. Please run the Streaming Assistant before VRCFaceTracking.");
+            Logger.LogError("\"Streaming Assistant\" or \"PICO Connect\" process was not found. Please run the Streaming Assistant or PICO Connect before VRCFaceTracking.");
             return false;
         }
         return true;
@@ -50,7 +50,7 @@ public sealed class Pico4SAFTExtTrackingModule : ExtTrackingModule, IDisposable
             Logger.LogWarning("No data is usable, skipping initialization.");
             return (false, false);
         }
-        Logger.LogInformation("Initializing Streaming Assistant data stream.");
+        Logger.LogInformation("Initializing PICO Connect data stream.");
     ReInitialize:
         try
         {
@@ -65,13 +65,13 @@ public sealed class Pico4SAFTExtTrackingModule : ExtTrackingModule, IDisposable
             Logger.LogDebug("Initialization Timeout: {timeout}ms", udpClient.Client.ReceiveTimeout);
             Logger.LogDebug("Client established: attempting to receive PxrFTInfo.");
 
-            Logger.LogInformation("Waiting for Streaming Assistant data stream.");
+            Logger.LogInformation("Waiting for PICO Connect data stream.");
             unsafe
             {
                 fixed (PxrFTInfo* pData = &data)
                     ReceivePxrData(pData);
             }
-            Logger.LogDebug("Streaming Assistant handshake success.");
+            Logger.LogDebug("PICO Connect handshake success.");
 
             if (FILE_LOG)
             {
@@ -109,7 +109,7 @@ public sealed class Pico4SAFTExtTrackingModule : ExtTrackingModule, IDisposable
         catch (Exception e)
         {
             Logger.LogWarning("Module failed to establish a connection.");
-            Logger.LogInformation("Tip: Did you forget to run Streaming Assistant?");
+            Logger.LogInformation("Tip: Did you forget to run Streaming Assistant or PICO Connect?");
             Logger.LogWarning("{exception}", e);
             Teardown(); // Closes UDP client and any other objects
             return (false, false);
@@ -279,7 +279,7 @@ public sealed class Pico4SAFTExtTrackingModule : ExtTrackingModule, IDisposable
         catch (SocketException ex) when (ex.ErrorCode is 10060)
         {
             if (!StreamerValidity())
-                Logger.LogInformation("Streaming Assistant is currently not running. Please ensure Streaming Assistant is running to send tracking data.");
+                Logger.LogInformation("Streaming Assistant or PICO Connect is currently not running. Please ensure Streaming Assistant or PICO Connect is running to send tracking data.");
             Logger.LogDebug("Data was not sent within the timeout. {msg}", ex.Message);
         }
         catch (Exception ex)
