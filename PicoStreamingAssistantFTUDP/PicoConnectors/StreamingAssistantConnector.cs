@@ -52,13 +52,13 @@ public sealed class StreamingAssistantConnector : PicoConnector
             Logger.LogDebug("Initialization Timeout: {timeout}ms", udpClient.Client.ReceiveTimeout);
             Logger.LogDebug("Client established: attempting to receive PxrFTInfo.");
 
-            Logger.LogInformation("Waiting for PICO Connect data stream.");
+            Logger.LogInformation("Waiting for {} data stream.", this.processName);
             unsafe
             {
                 fixed (PxrFTInfo* pData = &data)
                     ReceivePxrData(pData);
             }
-            Logger.LogDebug("PICO Connect handshake success.");
+            Logger.LogDebug("{} handshake success.", this.processName);
         }
         catch (SocketException ex) when (ex.ErrorCode is 10048)
         {
