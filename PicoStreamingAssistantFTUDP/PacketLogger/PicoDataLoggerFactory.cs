@@ -4,7 +4,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
-using Pico4SAFTExtTrackingModule.PicoConnector;
+using Pico4SAFTExtTrackingModule.PicoConnectors;
 
 namespace Pico4SAFTExtTrackingModule.PacketLogger;
 

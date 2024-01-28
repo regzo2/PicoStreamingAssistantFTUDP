@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Runtime.InteropServices;
 
-namespace Pico4SAFTExtTrackingModule.PicoConnector;
+namespace Pico4SAFTExtTrackingModule.PicoConnectors;
 
 public static class Pxr
 {

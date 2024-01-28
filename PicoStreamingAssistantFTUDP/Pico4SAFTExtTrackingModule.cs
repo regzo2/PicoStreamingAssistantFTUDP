@@ -1,9 +1,8 @@
-﻿using System.Diagnostics;
-using System.Net;
+﻿using System.Net;
 using System.Net.Sockets;
 
 using Microsoft.Extensions.Logging;
-using Pico4SAFTExtTrackingModule.PicoConnector;
+using Pico4SAFTExtTrackingModule.PicoConnectors;
 using Pico4SAFTExtTrackingModule.PacketLogger;
 using VRCFaceTracking;
 using VRCFaceTracking.Core.Library;
@@ -14,16 +13,8 @@ namespace Pico4SAFTExtTrackingModule;
 
 public sealed class Pico4SAFTExtTrackingModule : ExtTrackingModule, IDisposable
 {
-    private const string IP_ADDRESS = "127.0.0.1";
-    private const int PORT_NUMBER = 29765;
-    private static readonly unsafe int pxrHeaderSize = sizeof(TrackingDataHeader);
-    private readonly int PacketIndex = pxrHeaderSize;
-    private static readonly unsafe int pxrFtInfoSize = sizeof(PxrFTInfo);
-    private static readonly int PacketSize = pxrHeaderSize + pxrFtInfoSize;
     private bool disposedValue;
-    private UdpClient? udpClient;
-    private IPEndPoint? endPoint;
-    private PxrFTInfo data;
+    private PicoConnector? connector;
     private (bool, bool) trackingState = (false, false);
 
     private const bool FILE_LOG = false;
@@ -34,86 +25,38 @@ public sealed class Pico4SAFTExtTrackingModule : ExtTrackingModule, IDisposable
 
     private bool StreamerValidity()
     {
-        if (Process.GetProcessesByName("Streaming Assistant").Length is 0 && Process.GetProcessesByName("PICO Connect").Length is 0 && Process.GetProcessesByName("Business StreamingUW").Length is 0)
+        this.connector = ConnectorFactory.build(Logger);
+        if (this.connector == null)
         {
-            Logger.LogError("\"Streaming Assistant\" or \"PICO Connect\" process was not found. Please run the Streaming Assistant or PICO Connect before VRCFaceTracking.");
+            Logger.LogError("\"Streaming Assistant\", \"Streaming Assistant\" or \"PICO Connect\" process was not found. Please run the Streaming Assistant or PICO Connect before VRCFaceTracking.");
             return false;
         }
+
+        Logger.LogInformation("Using {}.", this.connector.GetProcessName());
         return true;
     }
 
     public override (bool eyeSuccess, bool expressionSuccess) Initialize(bool eyeAvailable, bool expressionAvailable)
     {
         trackingState = (eyeAvailable, expressionAvailable);
-        int retry = 0;
-        if (!StreamerValidity() || !eyeAvailable && !expressionAvailable)
+        if (!StreamerValidity() || (!eyeAvailable && !expressionAvailable))
         {
             Logger.LogWarning("No data is usable, skipping initialization.");
             return (false, false);
         }
+
         Logger.LogInformation("Initializing PICO Connect data stream.");
-    ReInitialize:
-        try
-        {
-            udpClient = new UdpClient(PORT_NUMBER);
-            endPoint = new IPEndPoint(IPAddress.Parse(IP_ADDRESS), PORT_NUMBER);
-            // Since Streaming Assistant is already running,
-            // this module is indeed needed,
-            // so the timeout failure is unnecessary.
-            // udpClient.Client.ReceiveTimeout = 15000; // Initialization timeout.
-
-            Logger.LogDebug("Host end-point: {endPoint}", endPoint);
-            Logger.LogDebug("Initialization Timeout: {timeout}ms", udpClient.Client.ReceiveTimeout);
-            Logger.LogDebug("Client established: attempting to receive PxrFTInfo.");
-
-            Logger.LogInformation("Waiting for PICO Connect data stream.");
-            unsafe
-            {
-                fixed (PxrFTInfo* pData = &data)
-                    ReceivePxrData(pData);
-            }
-            Logger.LogDebug("PICO Connect handshake success.");
-
-            if (FILE_LOG)
-            {
-                this.logger = PicoDataLoggerFactory.build(LOGGER_PATH);
-                Logger.LogInformation("Using {} path for PICO logs.", LOGGER_PATH);
-            }
-        }
-        catch (SocketException ex) when (ex.ErrorCode is 10048)
-        {
-            if (retry >= 3)
-                return (false, false);
-            retry++;
-            // Magic
-            // Close the pico_et_ft_bt_bridge.exe process and reinitialize it.
-            // It will listen to UDP port 29763 before pico_et_ft_bt_bridge.exe runs.
-            // Note: exclusively to simplify older versions of the FT bridge,
-            // the bridge now works without any need for process killing.
-            Process proc = new()
-            {
-                StartInfo = {
-                    FileName = "taskkill.exe",
-                    ArgumentList = {
-                        "/f",
-                        "/t",
-                        "/im",
-                        "pico_et_ft_bt_bridge.exe"
-                    },
-                    CreateNoWindow = true
-                }
-            };
-            proc.Start();
-            proc.WaitForExit();
-            goto ReInitialize;
-        }
-        catch (Exception e)
+        if (!this.connector.Connect())
         {
             Logger.LogWarning("Module failed to establish a connection.");
-            Logger.LogInformation("Tip: Did you forget to run Streaming Assistant or PICO Connect?");
-            Logger.LogWarning("{exception}", e);
-            Teardown(); // Closes UDP client and any other objects
+            Teardown(); // closes client and any other objects
             return (false, false);
+        }
+
+        if (FILE_LOG)
+        {
+            this.logger = PicoDataLoggerFactory.build(LOGGER_PATH);
+            Logger.LogInformation("Using {} path for PICO logs.", LOGGER_PATH);
         }
 
         ModuleInformation.Name = "Pico 4 Pro / Enterprise";
@@ -121,27 +64,12 @@ public sealed class Pico4SAFTExtTrackingModule : ExtTrackingModule, IDisposable
         var stream = typeof(Pico4SAFTExtTrackingModule).Assembly.GetManifestResourceStream("Pico4SAFTExtTrackingModule.Assets.pico-hmd.png");
         ModuleInformation.StaticImages = stream is not null ? new List<Stream> { stream } : ModuleInformation.StaticImages;
 
-        udpClient.Client.ReceiveTimeout = 5000;
-
         if (!trackingState.Item1)
             Logger.LogInformation("Eye tracking already in use, disabling eye data."); 
         if (!trackingState.Item2) 
             Logger.LogInformation("Expression Tracking already in use, disabling expression data.");
 
         return trackingState;
-    }
-
-    private unsafe bool ReceivePxrData(PxrFTInfo* pData)
-    {
-        fixed (byte* ptr = udpClient!.Receive(ref endPoint))
-        {
-            TrackingDataHeader tdh;
-            Buffer.MemoryCopy(ptr, &tdh, pxrHeaderSize, pxrHeaderSize);
-            if (tdh.tracking_type != 2) return false; // not facetracking packet
-
-            Buffer.MemoryCopy(ptr + PacketIndex, pData, pxrFtInfoSize, pxrFtInfoSize);
-        }
-        return true;
     }
 
     private static unsafe void UpdateEye(float* pxrShape, UnifiedSingleEyeData* left, UnifiedSingleEyeData* right)
@@ -253,28 +181,32 @@ public sealed class Pico4SAFTExtTrackingModule : ExtTrackingModule, IDisposable
         {
             unsafe
             {
-                fixed (PxrFTInfo* pData = &data)
-                    if (ReceivePxrData(pData))
+                float* pxrShape = this.connector.GetBlendShapes();
+                if (pxrShape != null)
+                {
+                    if (this.logger != null)
                     {
-                        float* pxrShape = pData->blendShapeWeight;
-                        if (this.logger != null) this.logger.UpdateValue(pData);
-
-                        fixed (UnifiedExpressionShape* unifiedShape = UnifiedTracking.Data.Shapes)
-                        {
-                            if (trackingState.Item1)
-                            {
-                                fixed (UnifiedSingleEyeData* pLeft = &UnifiedTracking.Data.Eye.Left)
-                                fixed (UnifiedSingleEyeData* pRight = &UnifiedTracking.Data.Eye.Right)
-                                {
-                                    UpdateEye(pxrShape, pLeft, pRight);
-                                    UpdateEyeExpression(pxrShape, unifiedShape);
-                                }
-                            }
-
-                            if (trackingState.Item2) 
-                                UpdateExpression(pxrShape, unifiedShape);
-                        }
+                        // legacy; PacketLogger#UpdateValue needs a PxrFTInfo; but we don't want to send that outside from the PicoConnector
+                        PxrFTInfo data = PicoDataLoggerHelper.FillPxrFTInfo(pxrShape);
+                        this.logger.UpdateValue(&data);
                     }
+
+                    fixed (UnifiedExpressionShape* unifiedShape = UnifiedTracking.Data.Shapes)
+                    {
+                        if (trackingState.Item1)
+                        {
+                            fixed (UnifiedSingleEyeData* pLeft = &UnifiedTracking.Data.Eye.Left)
+                            fixed (UnifiedSingleEyeData* pRight = &UnifiedTracking.Data.Eye.Right)
+                            {
+                                UpdateEye(pxrShape, pLeft, pRight);
+                                UpdateEyeExpression(pxrShape, unifiedShape);
+                            }
+                        }
+
+                        if (trackingState.Item2) 
+                            UpdateExpression(pxrShape, unifiedShape);
+                    }
+                }
             }
         }
         catch (SocketException ex) when (ex.ErrorCode is 10060)
@@ -297,10 +229,11 @@ public sealed class Pico4SAFTExtTrackingModule : ExtTrackingModule, IDisposable
         {
             if (disposing)
             {
-                if (udpClient is not null)
-                    udpClient.Client.Blocking = false;
-                Logger.LogInformation("Disposing of PxrFaceTracking UDP Client.");
-                udpClient?.Dispose();
+                if (this.connector != null)
+                {
+                    this.connector.Teardown();
+                    this.connector = null;
+                }
 
                 if (this.logger != null)
                 {
