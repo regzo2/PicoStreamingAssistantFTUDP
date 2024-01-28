@@ -24,11 +24,7 @@
   </ItemGroup>
 
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">
-    <Copy
-      SourceFiles="$(TargetPath)"
-      DestinationFiles="$(APPDATA)\VRCFaceTracking\CustomLibs\$(TargetFileName)"
-      OverwriteReadOnlyFiles="True"
-      SkipUnchangedFiles="True" />
+    <Copy SourceFiles="$(TargetPath)" DestinationFiles="$(APPDATA)\VRCFaceTracking\CustomLibs\$(TargetFileName)" OverwriteReadOnlyFiles="True" SkipUnchangedFiles="True" />
   </Target>
 
 </Project>

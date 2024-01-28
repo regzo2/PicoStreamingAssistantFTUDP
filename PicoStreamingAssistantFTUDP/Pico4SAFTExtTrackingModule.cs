@@ -3,7 +3,8 @@ using System.Net;
 using System.Net.Sockets;
 
 using Microsoft.Extensions.Logging;
-
+using Pico4SAFTExtTrackingModule.PicoConnector;
+using Pico4SAFTExtTrackingModule.PacketLogger;
 using VRCFaceTracking;
 using VRCFaceTracking.Core.Library;
 using VRCFaceTracking.Core.Params.Data;
@@ -27,7 +28,7 @@ public sealed class Pico4SAFTExtTrackingModule : ExtTrackingModule, IDisposable
 
     private const bool FILE_LOG = false;
     public static readonly string LOGGER_PATH = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "VRCFaceTracking\\PICOLogs.csv");
-    private Logger<PxrFTInfo>? logger;
+    private PacketLogger<PxrFTInfo>? logger;
 
     public override (bool SupportsEye, bool SupportsExpression) Supported { get; } = (true, true);
 
