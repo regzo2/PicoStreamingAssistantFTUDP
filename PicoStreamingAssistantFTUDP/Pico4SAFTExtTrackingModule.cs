@@ -27,13 +27,13 @@ public sealed class Pico4SAFTExtTrackingModule : ExtTrackingModule, IDisposable
 
     private const bool FILE_LOG = false;
     public static readonly string LOGGER_PATH = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "VRCFaceTracking\\PICOLogs.csv");
-    private Logger<PxrFTInfo> logger;
+    private Logger<PxrFTInfo>? logger;
 
     public override (bool SupportsEye, bool SupportsExpression) Supported { get; } = (true, true);
 
     private bool StreamerValidity()
     {
-        if (Process.GetProcessesByName("Streaming Assistant").Length is 0 && Process.GetProcessesByName("PICO Connect").Length is 0)
+        if (Process.GetProcessesByName("Streaming Assistant").Length is 0 && Process.GetProcessesByName("PICO Connect").Length is 0 && Process.GetProcessesByName("Business StreamingUW").Length is 0)
         {
             Logger.LogError("\"Streaming Assistant\" or \"PICO Connect\" process was not found. Please run the Streaming Assistant or PICO Connect before VRCFaceTracking.");
             return false;
