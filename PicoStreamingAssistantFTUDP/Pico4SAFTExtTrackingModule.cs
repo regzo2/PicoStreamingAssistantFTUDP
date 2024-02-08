@@ -32,12 +32,13 @@ public sealed class Pico4SAFTExtTrackingModule : ExtTrackingModule, IDisposable
     public override (bool SupportsEye, bool SupportsExpression) Supported { get; } = (true, true);
 
     private bool StreamerValidity()
-    {
-        if (Process.GetProcessesByName("Streaming Assistant").Length is 0)
-        {
-            Logger.LogError("\"Streaming Assistant\" process was not found. Please run the Streaming Assistant before VRCFaceTracking.");
-            return false;
-        }
+    {   
+            if (!(Process.GetProcessesByName("Streaming Assistant").Length > 0
+                || Process.GetProcessesByName("PICO Connect").Length > 0))
+            {           
+                Logger.LogError("\"Streaming Assistant or PICO Connect\" process was not found. Please run the Streaming Assistant or PICO Connect before VRCFaceTracking.");
+                return false;
+            }
         return true;
     }
 
