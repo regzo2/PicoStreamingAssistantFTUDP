@@ -1,6 +1,7 @@
 ﻿using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
+using System.Text.Json;
 
 using Microsoft.Extensions.Logging;
 
@@ -14,7 +15,7 @@ namespace Pico4SAFTExtTrackingModule;
 public sealed class Pico4SAFTExtTrackingModule : ExtTrackingModule, IDisposable
 {
     private const string IP_ADDRESS = "127.0.0.1";
-    private const int PORT_NUMBER = 29765;
+    private int PORT_NUMBER = 0;
     private static readonly unsafe int pxrHeaderSize = sizeof(TrackingDataHeader);
     private readonly int PacketIndex = pxrHeaderSize;
     private static readonly unsafe int pxrFtInfoSize = sizeof(PxrFTInfo);
@@ -31,14 +32,60 @@ public sealed class Pico4SAFTExtTrackingModule : ExtTrackingModule, IDisposable
 
     public override (bool SupportsEye, bool SupportsExpression) Supported { get; } = (true, true);
 
+
     private bool StreamerValidity()
     {
-        if (Process.GetProcessesByName("Streaming Assistant").Length is 0 && Process.GetProcessesByName("PICO Connect").Length is 0 && Process.GetProcessesByName("Business StreamingUW").Length is 0)
+        if (!(Process.GetProcessesByName("Streaming Assistant").Length is 0))
         {
-            Logger.LogError("\"Streaming Assistant\" or \"PICO Connect\" process was not found. Please run the Streaming Assistant or PICO Connect before VRCFaceTracking.");
+            Logger.LogInformation("Processes \"Streaming Assistant\" founded");
+            return true;
+        }
+        else if (!(Process.GetProcessesByName("PICO Connect").Length is 0))
+        {
+            Logger.LogInformation("Processes \"PICO Connect\" founded");
+            string configLocation = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "PICO Connect\\settings.json");
+            string configTemp = string.Empty;
+            Config? picoConfig;
+            try
+            {
+                configTemp = File.ReadAllText(configLocation);
+                picoConfig = JsonSerializer.Deserialize<Config>(configTemp);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError("Pico Connect Config Deserialize Failed");
+                return false;
+            }
+
+            if (picoConfig?.lab.faceTrackingTransferProtocol == 1)
+            {
+                PORT_NUMBER = 29763;
+                Logger.LogInformation("PICO Connect Protocol Version is 1");
+                return true;
+            }
+            else if (picoConfig?.lab.faceTrackingTransferProtocol == 2)
+            {
+                PORT_NUMBER = 29765;
+                Logger.LogInformation("PICO Connect Protocol Version is 2");
+                return true;
+            }
+            else
+            {
+                Logger.LogError("PICO Connect Protocol Version incorrect");
+                Logger.LogError($"You can find the config at \"{configLocation}\"");
+                return false;
+            }
+        }
+        else if (!(Process.GetProcessesByName("Business StreamingUW").Length is 0))
+        {
+            Logger.LogInformation("Processes \"Business StreamingUW\" founded");
+            return true;
+        }
+        else
+        {
+            Logger.LogError("Couldn't find any processes");
             return false;
         }
-        return true;
     }
 
     public override (bool eyeSuccess, bool expressionSuccess) Initialize(bool eyeAvailable, bool expressionAvailable)
