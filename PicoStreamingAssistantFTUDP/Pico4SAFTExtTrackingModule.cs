@@ -15,7 +15,7 @@ namespace Pico4SAFTExtTrackingModule;
 public sealed class Pico4SAFTExtTrackingModule : ExtTrackingModule, IDisposable
 {
     private const string IP_ADDRESS = "127.0.0.1";
-    private int PORT_NUMBER = 0;
+    private static int PORT_NUMBER = 0;
     private static readonly unsafe int pxrHeaderSize = sizeof(TrackingDataHeader);
     private readonly int PacketIndex = pxrHeaderSize;
     private static readonly unsafe int pxrFtInfoSize = sizeof(PxrFTInfo);
@@ -37,6 +37,7 @@ public sealed class Pico4SAFTExtTrackingModule : ExtTrackingModule, IDisposable
     {
         if (!(Process.GetProcessesByName("Streaming Assistant").Length is 0))
         {
+            PORT_NUMBER = 29765;
             Logger.LogInformation("Processes \"Streaming Assistant\" founded");
             return true;
         }
@@ -78,6 +79,7 @@ public sealed class Pico4SAFTExtTrackingModule : ExtTrackingModule, IDisposable
         }
         else if (!(Process.GetProcessesByName("Business StreamingUW").Length is 0))
         {
+            PORT_NUMBER = 29765;
             Logger.LogInformation("Processes \"Business StreamingUW\" founded");
             return true;
         }
