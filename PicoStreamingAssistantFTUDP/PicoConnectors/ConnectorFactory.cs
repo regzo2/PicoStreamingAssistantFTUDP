@@ -1,12 +1,13 @@
 ﻿using Microsoft.Extensions.Logging;
 using System.Diagnostics;
 using Pico4SAFTExtTrackingModule.PicoConnectors.ProgramChecker;
+using Pico4SAFTExtTrackingModule.PicoConnectors.ConfigChecker;
 
 namespace Pico4SAFTExtTrackingModule.PicoConnectors;
 
 public sealed class ConnectorFactory
 {
-    public static PicoConnector? build(ILogger Logger, IProgramChecker programChecker)
+    public static IPicoConnector? build(ILogger Logger, IProgramChecker programChecker, IConfigChecker configChecker)
     {
         bool using_sa = programChecker.Check(PicoPrograms.StreamingAssistant);
         bool using_pc = programChecker.Check(PicoPrograms.PicoConnect);
@@ -16,8 +17,12 @@ public sealed class ConnectorFactory
         else if (using_bs) return new LegacyConnector(Logger, PicoPrograms.BusinessStreaming);
         else if (using_pc)
         {
-            // TODO check mergetype
-            return new PicoConnectConnector(Logger);
+            try {
+                if (configChecker.GetTransferProtocolNumber(PicoPrograms.PicoConnect) == 2) return new LegacyConnector(Logger, PicoPrograms.PicoConnect); // using legacy protocol
+            } catch (Exception ex) {
+                Logger.LogWarning("Exception while trying to get the config protocol number: " + ex.ToString);
+            }
+            return new PicoConnectConnector(Logger); // couldn't get / using latest protocol
         }
 
         return null; // none found

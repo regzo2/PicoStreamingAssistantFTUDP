@@ -12,7 +12,7 @@ namespace Pico4SAFTExtTrackingModule.PicoConnectors;
  * Connector class for Streaming Assitant & Business Streaming.
  * Also used for PICO Connect on `mergetype=2`
  **/
-public sealed class LegacyConnector : PicoConnector
+public sealed class LegacyConnector : IPicoConnector
 {
     private const string IP_ADDRESS = "127.0.0.1";
     private const int PORT_NUMBER = 29765;

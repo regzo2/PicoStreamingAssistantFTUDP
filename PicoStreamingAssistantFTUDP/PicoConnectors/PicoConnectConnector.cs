@@ -6,7 +6,7 @@ namespace Pico4SAFTExtTrackingModule.PicoConnectors;
 /**
  * Connector class for PICO Connect
  **/
-public sealed class PicoConnectConnector : PicoConnector
+public sealed class PicoConnectConnector : IPicoConnector
 {
     private ILogger Logger;
 
@@ -32,7 +32,7 @@ public sealed class PicoConnectConnector : PicoConnector
         return "PICO Connect";
     }
 
-    void PicoConnector.Teardown()
+    void IPicoConnector.Teardown()
     {
         
     }

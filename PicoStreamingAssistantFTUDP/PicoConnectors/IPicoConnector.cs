@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace Pico4SAFTExtTrackingModule.PicoConnectors;
 
-public interface PicoConnector
+public interface IPicoConnector
 {
     string GetProcessName();
 

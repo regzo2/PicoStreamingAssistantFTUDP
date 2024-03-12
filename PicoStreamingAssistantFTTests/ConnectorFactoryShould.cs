@@ -1,5 +1,6 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
+using Pico4SAFTExtTrackingModule.PicoConnectors.ConfigChecker;
 using Pico4SAFTExtTrackingModule.PicoConnectors.ProgramChecker;
 
 namespace Pico4SAFTExtTrackingModule.PicoConnectors;
@@ -14,9 +15,12 @@ public class ConnectorFactoryShould
         Mock<IProgramChecker> programCheckerMock = new Mock<IProgramChecker>();
         programCheckerMock.Setup(m => m.Check(It.IsAny<PicoPrograms>()))
                         .Returns(false);
+        Mock<IConfigChecker> configCheckerMock = new Mock<IConfigChecker>();
+        configCheckerMock.Setup(m => m.GetTransferProtocolNumber(It.IsAny<PicoPrograms>()))
+                        .Returns(0);
 
         // act
-        PicoConnector? got = ConnectorFactory.build(null, programCheckerMock.Object);
+        IPicoConnector? got = ConnectorFactory.build(null, programCheckerMock.Object, configCheckerMock.Object);
 
         // assert
         Assert.IsNull(got);
@@ -31,12 +35,35 @@ public class ConnectorFactoryShould
                         .Returns(false);
         programCheckerMock.Setup(m => m.Check(PicoPrograms.PicoConnect))
                         .Returns(true);
+        Mock<IConfigChecker> configCheckerMock = new Mock<IConfigChecker>();
+        configCheckerMock.Setup(m => m.GetTransferProtocolNumber(It.IsAny<PicoPrograms>()))
+                        .Returns(0);
 
         // act
-        PicoConnector? got = ConnectorFactory.build(null, programCheckerMock.Object);
+        IPicoConnector? got = ConnectorFactory.build(null, programCheckerMock.Object, configCheckerMock.Object);
 
         // assert
         Assert.AreEqual(typeof(PicoConnectConnector), got?.GetType());
+    }
+
+    [TestMethod]
+    public void ReturnLegacyConnectorIfPicoConnectIsRunningAndIsUsingOldTransferProtocol()
+    {
+        // arrange
+        Mock<IProgramChecker> programCheckerMock = new Mock<IProgramChecker>();
+        programCheckerMock.Setup(m => m.Check(It.IsAny<PicoPrograms>()))
+                        .Returns(false);
+        programCheckerMock.Setup(m => m.Check(PicoPrograms.PicoConnect))
+                        .Returns(true);
+        Mock<IConfigChecker> configCheckerMock = new Mock<IConfigChecker>();
+        configCheckerMock.Setup(m => m.GetTransferProtocolNumber(It.IsAny<PicoPrograms>()))
+                        .Returns(2); // old transfer protocol
+
+        // act
+        IPicoConnector? got = ConnectorFactory.build(null, programCheckerMock.Object, configCheckerMock.Object);
+
+        // assert
+        Assert.AreEqual(typeof(LegacyConnector), got?.GetType());
     }
 
     [TestMethod]
@@ -48,9 +75,12 @@ public class ConnectorFactoryShould
                         .Returns(false);
         programCheckerMock.Setup(m => m.Check(PicoPrograms.StreamingAssistant))
                         .Returns(true);
+        Mock<IConfigChecker> configCheckerMock = new Mock<IConfigChecker>();
+        configCheckerMock.Setup(m => m.GetTransferProtocolNumber(It.IsAny<PicoPrograms>()))
+                        .Returns(0);
 
         // act
-        PicoConnector? got = ConnectorFactory.build(null, programCheckerMock.Object);
+        IPicoConnector? got = ConnectorFactory.build(null, programCheckerMock.Object, configCheckerMock.Object);
 
         // assert
         Assert.AreEqual(typeof(LegacyConnector), got?.GetType());
@@ -66,9 +96,12 @@ public class ConnectorFactoryShould
                         .Returns(false);
         programCheckerMock.Setup(m => m.Check(PicoPrograms.BusinessStreaming))
                         .Returns(true);
+        Mock<IConfigChecker> configCheckerMock = new Mock<IConfigChecker>();
+        configCheckerMock.Setup(m => m.GetTransferProtocolNumber(It.IsAny<PicoPrograms>()))
+                        .Returns(0);
 
         // act
-        PicoConnector? got = ConnectorFactory.build(null, programCheckerMock.Object);
+        IPicoConnector? got = ConnectorFactory.build(null, programCheckerMock.Object, configCheckerMock.Object);
 
         // assert
         Assert.AreEqual(typeof(LegacyConnector), got?.GetType());

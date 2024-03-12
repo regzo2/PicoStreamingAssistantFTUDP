@@ -9,13 +9,14 @@ using VRCFaceTracking.Core.Library;
 using VRCFaceTracking.Core.Params.Data;
 using VRCFaceTracking.Core.Params.Expressions;
 using Pico4SAFTExtTrackingModule.PicoConnectors.ProgramChecker;
+using Pico4SAFTExtTrackingModule.PicoConnectors.ConfigChecker;
 
 namespace Pico4SAFTExtTrackingModule;
 
 public sealed class Pico4SAFTExtTrackingModule : ExtTrackingModule, IDisposable
 {
     private bool disposedValue;
-    private PicoConnector? connector;
+    private IPicoConnector? connector;
     private (bool, bool) trackingState = (false, false);
 
     private const bool FILE_LOG = false;
@@ -26,7 +27,7 @@ public sealed class Pico4SAFTExtTrackingModule : ExtTrackingModule, IDisposable
 
     private bool StreamerValidity()
     {
-        this.connector = ConnectorFactory.build(Logger, new ProcessRunningProgramChecker());
+        this.connector = ConnectorFactory.build(Logger, new ProcessRunningProgramChecker(), new ConfigChecker());
         if (this.connector == null)
         {
             Logger.LogError("\"Streaming Assistant\", \"Streaming Assistant\" or \"PICO Connect\" process was not found. Please run the Streaming Assistant or PICO Connect before VRCFaceTracking.");
