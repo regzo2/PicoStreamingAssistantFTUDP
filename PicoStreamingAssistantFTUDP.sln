@@ -13,6 +13,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VRCFaceTracking.Core", "..\
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Pico4SAFTExtTrackingModule", "PicoStreamingAssistantFTUDP\Pico4SAFTExtTrackingModule.csproj", "{C5FDC7A7-FBA2-46F2-968C-FF81A57C1ED8}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PicoStreamingAssistantFTTests", "PicoStreamingAssistantFTTests\PicoStreamingAssistantFTTests.csproj", "{C4623909-EA05-45B7-B949-31ECB715EA2F}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -57,6 +59,22 @@ Global
 		{C5FDC7A7-FBA2-46F2-968C-FF81A57C1ED8}.Release|x64.Build.0 = Release|Any CPU
 		{C5FDC7A7-FBA2-46F2-968C-FF81A57C1ED8}.Release|x86.ActiveCfg = Release|Any CPU
 		{C5FDC7A7-FBA2-46F2-968C-FF81A57C1ED8}.Release|x86.Build.0 = Release|Any CPU
+		{C4623909-EA05-45B7-B949-31ECB715EA2F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C4623909-EA05-45B7-B949-31ECB715EA2F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C4623909-EA05-45B7-B949-31ECB715EA2F}.Debug|arm64.ActiveCfg = Debug|Any CPU
+		{C4623909-EA05-45B7-B949-31ECB715EA2F}.Debug|arm64.Build.0 = Debug|Any CPU
+		{C4623909-EA05-45B7-B949-31ECB715EA2F}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{C4623909-EA05-45B7-B949-31ECB715EA2F}.Debug|x64.Build.0 = Debug|Any CPU
+		{C4623909-EA05-45B7-B949-31ECB715EA2F}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{C4623909-EA05-45B7-B949-31ECB715EA2F}.Debug|x86.Build.0 = Debug|Any CPU
+		{C4623909-EA05-45B7-B949-31ECB715EA2F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C4623909-EA05-45B7-B949-31ECB715EA2F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C4623909-EA05-45B7-B949-31ECB715EA2F}.Release|arm64.ActiveCfg = Release|Any CPU
+		{C4623909-EA05-45B7-B949-31ECB715EA2F}.Release|arm64.Build.0 = Release|Any CPU
+		{C4623909-EA05-45B7-B949-31ECB715EA2F}.Release|x64.ActiveCfg = Release|Any CPU
+		{C4623909-EA05-45B7-B949-31ECB715EA2F}.Release|x64.Build.0 = Release|Any CPU
+		{C4623909-EA05-45B7-B949-31ECB715EA2F}.Release|x86.ActiveCfg = Release|Any CPU
+		{C4623909-EA05-45B7-B949-31ECB715EA2F}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

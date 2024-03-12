@@ -8,6 +8,7 @@ using VRCFaceTracking;
 using VRCFaceTracking.Core.Library;
 using VRCFaceTracking.Core.Params.Data;
 using VRCFaceTracking.Core.Params.Expressions;
+using Pico4SAFTExtTrackingModule.PicoConnectors.ProgramChecker;
 
 namespace Pico4SAFTExtTrackingModule;
 
@@ -25,7 +26,7 @@ public sealed class Pico4SAFTExtTrackingModule : ExtTrackingModule, IDisposable
 
     private bool StreamerValidity()
     {
-        this.connector = ConnectorFactory.build(Logger);
+        this.connector = ConnectorFactory.build(Logger, new ProcessRunningProgramChecker());
         if (this.connector == null)
         {
             Logger.LogError("\"Streaming Assistant\", \"Streaming Assistant\" or \"PICO Connect\" process was not found. Please run the Streaming Assistant or PICO Connect before VRCFaceTracking.");

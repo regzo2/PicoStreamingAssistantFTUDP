@@ -9,9 +9,10 @@ using VRCFaceTracking;
 namespace Pico4SAFTExtTrackingModule.PicoConnectors;
 
 /**
- * Connector class for Streaming Assitant & Business Streaming
+ * Connector class for Streaming Assitant & Business Streaming.
+ * Also used for PICO Connect on `mergetype=2`
  **/
-public sealed class StreamingAssistantConnector : PicoConnector
+public sealed class LegacyConnector : PicoConnector
 {
     private const string IP_ADDRESS = "127.0.0.1";
     private const int PORT_NUMBER = 29765;
@@ -28,10 +29,30 @@ public sealed class StreamingAssistantConnector : PicoConnector
 
     private string processName;
 
-    public StreamingAssistantConnector(ILogger Logger, bool using_sa)
+    public LegacyConnector(ILogger Logger, PicoPrograms program_using)
     {
         this.Logger = Logger;
-        this.processName = (using_sa ? "Streaming Assistant" : "Business Streaming");
+
+        switch (program_using)
+        {
+            case PicoPrograms.StreamingAssistant:
+                this.processName = "Streaming Assistant";
+                break;
+
+            case PicoPrograms.BusinessStreaming:
+                this.processName = "Business Streaming";
+                break;
+
+            case PicoPrograms.PicoConnect:
+                this.processName = "PICO Connect";
+                break;
+
+            default:
+                // shouldn't reach this
+                Logger.LogWarning("Couldn't find the name for program " + program_using.ToString());
+                this.processName = "[?]";
+                break;
+        }
     }
 
     public bool Connect()

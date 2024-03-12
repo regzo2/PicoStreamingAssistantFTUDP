@@ -17,32 +17,8 @@ public sealed class PicoConnectConnector : PicoConnector
 
     public bool Connect()
     {
-        Logger.LogInformation("Active Connections");
-        Logger.LogInformation("");
-
-        Logger.LogInformation(" Proto Local Address Foreign Address State PID");
-        foreach (TcpRow tcpRow in ManagedIpHelper.GetExtendedTcpTable(true))
-        {
-            Logger.LogInformation(" {0,-7}{1,-23}{2, -23}{3,-14}{4}", "TCP", tcpRow.LocalEndPoint, tcpRow.RemoteEndPoint, tcpRow.State, tcpRow.ProcessId);
-
-            Process process = Process.GetProcessById(tcpRow.ProcessId);
-            if (process.ProcessName != "System")
-            {
-                foreach (ProcessModule processModule in process.Modules)
-                {
-                    Logger.LogInformation(" {0}", processModule.FileName);
-                }
-
-                Logger.LogInformation(" [{0}]", Path.GetFileName(process.MainModule.FileName));
-            }
-            else
-            {
-                Logger.LogInformation(" -- unknown component(s) --");
-                Logger.LogInformation(" [{0}]", "System");
-            }
-
-            Logger.LogInformation("");
-        }
+        Logger.LogInformation("PICO Connect module is still under development.");
+        Logger.LogInformation("You may want to set `mergetype=2` in the PICO Connect config to use the old protocol. For more information check https://docs.vrcft.io/docs/hardware/pico4pe#pico-connect-beta-setup");
         return false;
     }
 
