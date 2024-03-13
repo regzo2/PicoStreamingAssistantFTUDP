@@ -64,6 +64,7 @@ public class ConnectorFactoryShould
 
         // assert
         Assert.AreEqual(typeof(LegacyConnector), got?.GetType());
+        Assert.AreEqual("PICO Connect", got?.GetProcessName());
     }
 
     [TestMethod]

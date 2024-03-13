@@ -35,8 +35,14 @@ public sealed class PicoConnectConfigChecker : IConfigChecker
     public int GetTransferProtocolNumber(PicoPrograms program)
     {
         if (program != PicoPrograms.PicoConnect) throw new ArgumentException("PicoConnectConfigChecker class only checks for PICO Connect config files");
+        if (picoConfig == null) return 0; // couldn't get; send default value
 
-        if (picoConfig.Value == null) return 0; // couldn't get; send default value (0)
-        return picoConfig!.Value.lab.faceTrackingTransferProtocol;
+        if (picoConfig!.Value == null || picoConfig!.Value.lab == null)
+        {
+            logger.LogError("Couldn't get the value of `faceTrackingTransferProtocol` on the setting.json file");
+            return 0; // send default value
+        }
+
+        return picoConfig!.Value!.lab!.faceTrackingTransferProtocol;
     }
 }
