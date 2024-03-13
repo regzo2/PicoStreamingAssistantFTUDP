@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using Pico4SAFTExtTrackingModule.PicoConnectors.ConfigChecker;
@@ -12,6 +13,7 @@ public class ConnectorFactoryShould
     public void ReturnNullIfNoSupportedProcessIsRunning()
     {
         // arrange
+        Mock<ILogger> logger = new Mock<ILogger>();
         Mock<IProgramChecker> programCheckerMock = new Mock<IProgramChecker>();
         programCheckerMock.Setup(m => m.Check(It.IsAny<PicoPrograms>()))
                         .Returns(false);
@@ -20,7 +22,7 @@ public class ConnectorFactoryShould
                         .Returns(0);
 
         // act
-        IPicoConnector? got = ConnectorFactory.build(null, programCheckerMock.Object, configCheckerMock.Object);
+        IPicoConnector? got = ConnectorFactory.build(logger.Object, programCheckerMock.Object, configCheckerMock.Object);
 
         // assert
         Assert.IsNull(got);
@@ -30,6 +32,7 @@ public class ConnectorFactoryShould
     public void ReturnPicoConnectConnectorIfPicoConnectIsRunning()
     {
         // arrange
+        Mock<ILogger> logger = new Mock<ILogger>();
         Mock<IProgramChecker> programCheckerMock = new Mock<IProgramChecker>();
         programCheckerMock.Setup(m => m.Check(It.IsAny<PicoPrograms>()))
                         .Returns(false);
@@ -40,7 +43,7 @@ public class ConnectorFactoryShould
                         .Returns(0);
 
         // act
-        IPicoConnector? got = ConnectorFactory.build(null, programCheckerMock.Object, configCheckerMock.Object);
+        IPicoConnector? got = ConnectorFactory.build(logger.Object, programCheckerMock.Object, configCheckerMock.Object);
 
         // assert
         Assert.AreEqual(typeof(PicoConnectConnector), got?.GetType());
@@ -50,6 +53,7 @@ public class ConnectorFactoryShould
     public void ReturnLegacyConnectorIfPicoConnectIsRunningAndIsUsingOldTransferProtocol()
     {
         // arrange
+        Mock<ILogger> logger = new Mock<ILogger>();
         Mock<IProgramChecker> programCheckerMock = new Mock<IProgramChecker>();
         programCheckerMock.Setup(m => m.Check(It.IsAny<PicoPrograms>()))
                         .Returns(false);
@@ -60,7 +64,7 @@ public class ConnectorFactoryShould
                         .Returns(2); // old transfer protocol
 
         // act
-        IPicoConnector? got = ConnectorFactory.build(null, programCheckerMock.Object, configCheckerMock.Object);
+        IPicoConnector? got = ConnectorFactory.build(logger.Object, programCheckerMock.Object, configCheckerMock.Object);
 
         // assert
         Assert.AreEqual(typeof(LegacyConnector), got?.GetType());
@@ -71,6 +75,7 @@ public class ConnectorFactoryShould
     public void ReturnLegacyConnectorIfStreamingAssistantIsRunning()
     {
         // arrange
+        Mock<ILogger> logger = new Mock<ILogger>();
         Mock<IProgramChecker> programCheckerMock = new Mock<IProgramChecker>();
         programCheckerMock.Setup(m => m.Check(It.IsAny<PicoPrograms>()))
                         .Returns(false);
@@ -81,7 +86,7 @@ public class ConnectorFactoryShould
                         .Returns(0);
 
         // act
-        IPicoConnector? got = ConnectorFactory.build(null, programCheckerMock.Object, configCheckerMock.Object);
+        IPicoConnector? got = ConnectorFactory.build(logger.Object, programCheckerMock.Object, configCheckerMock.Object);
 
         // assert
         Assert.AreEqual(typeof(LegacyConnector), got?.GetType());
@@ -92,6 +97,7 @@ public class ConnectorFactoryShould
     public void ReturnLegacyConnectorIfBusinessStreamingIsRunning()
     {
         // arrange
+        Mock<ILogger> logger = new Mock<ILogger>();
         Mock<IProgramChecker> programCheckerMock = new Mock<IProgramChecker>();
         programCheckerMock.Setup(m => m.Check(It.IsAny<PicoPrograms>()))
                         .Returns(false);
@@ -102,7 +108,7 @@ public class ConnectorFactoryShould
                         .Returns(0);
 
         // act
-        IPicoConnector? got = ConnectorFactory.build(null, programCheckerMock.Object, configCheckerMock.Object);
+        IPicoConnector? got = ConnectorFactory.build(logger.Object, programCheckerMock.Object, configCheckerMock.Object);
 
         // assert
         Assert.AreEqual(typeof(LegacyConnector), got?.GetType());
