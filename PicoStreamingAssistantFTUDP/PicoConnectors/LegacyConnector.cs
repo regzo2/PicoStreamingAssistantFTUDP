@@ -132,15 +132,21 @@ public sealed class LegacyConnector : IPicoConnector
 
     public void Teardown()
     {
-        if (udpClient is not null) udpClient.Client.Blocking = false;
         Logger.LogInformation("Disposing of PxrFaceTracking UDP Client.");
+        if (udpClient is not null) udpClient.Client.Blocking = false;
         udpClient?.Dispose();
+        udpClient = null;
+        endPoint = null;
     }
 
     private unsafe bool ReceivePxrData(PxrFTInfo* pData)
     {
+        if (udpClient == null || endPoint == null) return false;
+
         fixed (byte* ptr = udpClient!.Receive(ref endPoint))
         {
+            if (ptr == null) return false;
+
             TrackingDataHeader tdh;
             Buffer.MemoryCopy(ptr, &tdh, pxrHeaderSize, pxrHeaderSize);
             if (tdh.tracking_type != 2) return false; // not facetracking packet

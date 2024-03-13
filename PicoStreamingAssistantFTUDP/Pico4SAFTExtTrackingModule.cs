@@ -47,7 +47,7 @@ public sealed class Pico4SAFTExtTrackingModule : ExtTrackingModule, IDisposable
             return (false, false);
         }
 
-        Logger.LogInformation("Initializing PICO Connect data stream.");
+        Logger.LogInformation("Initializing {} data stream.", this.connector.GetProcessName());
         if (!this.connector.Connect())
         {
             Logger.LogWarning("Module failed to establish a connection.");
@@ -214,7 +214,7 @@ public sealed class Pico4SAFTExtTrackingModule : ExtTrackingModule, IDisposable
         catch (SocketException ex) when (ex.ErrorCode is 10060)
         {
             if (!StreamerValidity())
-                Logger.LogInformation("Streaming Assistant or PICO Connect is currently not running. Please ensure Streaming Assistant or PICO Connect is running to send tracking data.");
+                Logger.LogInformation("Streaming Assistant, Business Streaming or PICO Connect is currently not running. Please ensure one program is running to send tracking data.");
             Logger.LogDebug("Data was not sent within the timeout. {msg}", ex.Message);
         }
         catch (Exception ex)
