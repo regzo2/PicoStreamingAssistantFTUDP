@@ -20,6 +20,7 @@ public sealed class PicoConnectConfigChecker : IConfigChecker
     private static Config GetConfig(IFileSystem fileSystem, ILogger? logger = null)
     {
         string configLocation = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "PICO Connect\\settings.json");
+        logger.LogInformation("Expecting PICO Connect settings file at '" + configLocation + "'");
         try
         {
             string configContents = fileSystem.File.ReadAllText(configLocation);
@@ -35,7 +36,6 @@ public sealed class PicoConnectConfigChecker : IConfigChecker
     public int GetTransferProtocolNumber(PicoPrograms program)
     {
         if (program != PicoPrograms.PicoConnect) throw new ArgumentException("PicoConnectConfigChecker class only checks for PICO Connect config files");
-        if (picoConfig == null) return 0; // couldn't get; send default value
 
         if (picoConfig!.Value == null || picoConfig!.Value.lab == null)
         {
