@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Pico4SAFTExtTrackingModule;
+namespace Pico4SAFTExtTrackingModule.PacketLogger;
 
 public interface DataExtractor<T>
 {

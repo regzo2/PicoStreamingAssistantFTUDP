@@ -4,8 +4,9 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
+using Pico4SAFTExtTrackingModule.PicoConnectors;
 
-namespace Pico4SAFTExtTrackingModule;
+namespace Pico4SAFTExtTrackingModule.PacketLogger;
 
 public sealed class PicoDataLoggerFactory
 {
@@ -51,8 +52,8 @@ public sealed class PicoDataLoggerFactory
         }
     }
 
-    public static unsafe Logger<PxrFTInfo> build(string path)
+    public static unsafe PacketLogger<PxrFTInfo> build(string path)
     {
-        return new Logger<PxrFTInfo>(path, new PicoDataExtractor());
+        return new PacketLogger<PxrFTInfo>(path, new PicoDataExtractor());
     }
 }

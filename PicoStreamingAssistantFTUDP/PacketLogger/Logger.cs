@@ -4,9 +4,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Pico4SAFTExtTrackingModule;
+namespace Pico4SAFTExtTrackingModule.PacketLogger;
 
-public sealed class Logger<T> : IDisposable
+public sealed class PacketLogger<T> : IDisposable
 {
     private const char CSV_DELIMITER = ';';
 
@@ -20,7 +20,7 @@ public sealed class Logger<T> : IDisposable
     private T current;
     private object waitingCurrentLock = new object();
 
-    public Logger(string filePath, DataExtractor<T> dataExtractor)
+    public PacketLogger(string filePath, DataExtractor<T> dataExtractor)
     {
         this.dataExtractor = dataExtractor;
         this.waiting = true; // request first data
