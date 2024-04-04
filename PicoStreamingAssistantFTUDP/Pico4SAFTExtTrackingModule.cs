@@ -10,6 +10,7 @@ using VRCFaceTracking.Core.Params.Data;
 using VRCFaceTracking.Core.Params.Expressions;
 using Pico4SAFTExtTrackingModule.PicoConnectors.ProgramChecker;
 using Pico4SAFTExtTrackingModule.PicoConnectors.ConfigChecker;
+using System.Text;
 
 namespace Pico4SAFTExtTrackingModule;
 
@@ -25,23 +26,37 @@ public sealed class Pico4SAFTExtTrackingModule : ExtTrackingModule, IDisposable
 
     public override (bool SupportsEye, bool SupportsExpression) Supported { get; } = (true, true);
 
-    private bool StreamerValidity()
+    private bool StreamerValidity(bool isInitialize)
     {
-        this.connector = ConnectorFactory.build(Logger, new ProcessRunningProgramChecker(), new ConfigChecker(Logger));
-        if (this.connector == null)
+        if (isInitialize)
         {
-            Logger.LogError("\"Streaming Assistant\", \"Streaming Assistant\" or \"PICO Connect\" process was not found. Please run the Streaming Assistant or PICO Connect before VRCFaceTracking.");
-            return false;
-        }
+            this.connector = ConnectorFactory.build(Logger, new ProcessRunningProgramChecker(), new ConfigChecker(Logger));
+            if (this.connector == null)
+            {
+                Logger.LogError("\"Streaming Assistant\", \"Streaming Assistant\" or \"PICO Connect\" process was not found. Please run the Streaming Assistant or PICO Connect before VRCFaceTracking.");
+                return false;
+            }
 
-        Logger.LogInformation("Using {}.", this.connector.GetProcessName());
-        return true;
+            Logger.LogInformation("Using {}.", this.connector.GetProcessName());
+            return true;
+        }
+        else
+        {
+            var programChecker = new ProcessRunningProgramChecker();
+            bool using_sa = programChecker.Check(PicoPrograms.StreamingAssistant);
+            bool using_pc = programChecker.Check(PicoPrograms.PicoConnect);
+            bool using_bs = programChecker.Check(PicoPrograms.BusinessStreaming);
+            if (using_sa) return true;
+            else if (using_bs) return true;
+            else if (using_pc) return true;
+            else return false;
+        }
     }
 
     public override (bool eyeSuccess, bool expressionSuccess) Initialize(bool eyeAvailable, bool expressionAvailable)
     {
         trackingState = (eyeAvailable, expressionAvailable);
-        if (!StreamerValidity() || (!eyeAvailable && !expressionAvailable))
+        if (!StreamerValidity(true) || (!eyeAvailable && !expressionAvailable))
         {
             Logger.LogWarning("No data is usable, skipping initialization.");
             return (false, false);
@@ -213,7 +228,7 @@ public sealed class Pico4SAFTExtTrackingModule : ExtTrackingModule, IDisposable
         }
         catch (SocketException ex) when (ex.ErrorCode is 10060)
         {
-            if (!StreamerValidity())
+            if (!StreamerValidity(false))
                 Logger.LogInformation("Streaming Assistant, Business Streaming or PICO Connect is currently not running. Please ensure one program is running to send tracking data.");
             Logger.LogDebug("Data was not sent within the timeout. {msg}", ex.Message);
         }
