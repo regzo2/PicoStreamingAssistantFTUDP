@@ -79,7 +79,7 @@ public sealed class LegacyConnector : IPicoConnector
                 fixed (PxrFTInfo* pData = &data)
                     ReceivePxrData(pData);
             }
-            Logger.LogDebug("{} handshake success.", this.processName);
+            Logger.LogInformation("{} handshake success.", this.processName);
         }
         catch (SocketException ex) when (ex.ErrorCode is 10048)
         {
