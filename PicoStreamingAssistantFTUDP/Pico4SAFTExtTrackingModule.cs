@@ -10,7 +10,6 @@ using VRCFaceTracking.Core.Params.Data;
 using VRCFaceTracking.Core.Params.Expressions;
 using Pico4SAFTExtTrackingModule.PicoConnectors.ProgramChecker;
 using Pico4SAFTExtTrackingModule.PicoConnectors.ConfigChecker;
-using System.Text;
 
 namespace Pico4SAFTExtTrackingModule;
 
