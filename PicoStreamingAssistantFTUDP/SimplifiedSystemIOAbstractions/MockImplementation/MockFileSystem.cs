@@ -13,7 +13,7 @@ public sealed class MockFileSystem : IFileSystem, IFile
 
     public void AddFile(string path, MockFileData file)
     {
-        this._contents.Add(path, file.Contents);
+        this._contents.Add(path, file.Contents == null ? "" : file.Contents);
     }
 
     public string ReadAllText(string path)
@@ -23,5 +23,15 @@ public sealed class MockFileSystem : IFileSystem, IFile
         if (!found) throw new FileNotFoundException("Couldn't find any file on " + path);
 
         return text;
+    }
+
+    public bool Exists(string path)
+    {
+        return this._contents.ContainsKey(path);
+    }
+
+    public void WriteAllText(string path, string? contents)
+    {
+        this.AddFile(path, new MockFileData(contents));
     }
 }
