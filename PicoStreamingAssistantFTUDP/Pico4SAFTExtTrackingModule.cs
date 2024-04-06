@@ -74,10 +74,6 @@ public sealed class Pico4SAFTExtTrackingModule : ExtTrackingModule, IDisposable
         }
 
         this.scaler = new FileBlendshapeScalerFactory().build(Logger);
-        if (!((FileBlendshapeScaler)this.scaler).LoadConfigFile())
-        {
-            Logger.LogWarning("Failed to load/create module config file.");
-        }
 
         if (FILE_LOG)
         {

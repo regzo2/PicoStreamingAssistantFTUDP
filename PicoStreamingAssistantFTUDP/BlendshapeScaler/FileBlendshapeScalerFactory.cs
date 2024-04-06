@@ -15,6 +15,14 @@ public class FileBlendshapeScalerFactory
 
     public IBlendshapeScaler build(ILogger Logger)
     {
-        return new FileBlendshapeScaler(Logger, new FileSystem(), ModuleConfigPath.FullPath);
+        IBlendshapeScaler scaler = new FileBlendshapeScaler(Logger, new FileSystem(), ModuleConfigPath.FullPath);
+        IBlendshapeScaler scalerLimiter = new ScalerLimiter(scaler);
+
+        if (!((FileBlendshapeScaler)scaler).LoadConfigFile())
+        {
+            Logger.LogWarning("Failed to load/create module config file.");
+        }
+
+        return scalerLimiter;
     }
 }
