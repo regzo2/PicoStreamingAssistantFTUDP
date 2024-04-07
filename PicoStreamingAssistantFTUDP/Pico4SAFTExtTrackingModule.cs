@@ -10,6 +10,7 @@ using VRCFaceTracking.Core.Params.Data;
 using VRCFaceTracking.Core.Params.Expressions;
 using Pico4SAFTExtTrackingModule.PicoConnectors.ProgramChecker;
 using Pico4SAFTExtTrackingModule.PicoConnectors.ConfigChecker;
+using Pico4SAFTExtTrackingModule.BlendshapeScaler;
 
 namespace Pico4SAFTExtTrackingModule;
 
@@ -17,13 +18,30 @@ public sealed class Pico4SAFTExtTrackingModule : ExtTrackingModule, IDisposable
 {
     private bool disposedValue;
     private IPicoConnector? connector;
-    private (bool, bool) trackingState = (false, false);
+    private IBlendshapeScaler? scaler;
+    public (bool, bool) trackingState = (false, false);
 
     private const bool FILE_LOG = false;
     public static readonly string LOGGER_PATH = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "VRCFaceTracking\\PICOLogs.csv");
     private PacketLogger<PxrFTInfo>? logger;
 
     public override (bool SupportsEye, bool SupportsExpression) Supported { get; } = (true, true);
+
+    public Pico4SAFTExtTrackingModule()
+    {
+        this.connector = null;
+        this.scaler = null;
+        this.logger = null;
+        this.disposedValue = false;
+    }
+
+    public Pico4SAFTExtTrackingModule(IPicoConnector connector, IBlendshapeScaler scaler)
+    {
+        this.connector = connector;
+        this.scaler = scaler;
+        this.logger = null;
+        this.disposedValue = false;
+    }
 
     private bool StreamerValidity()
     {
@@ -56,6 +74,8 @@ public sealed class Pico4SAFTExtTrackingModule : ExtTrackingModule, IDisposable
             return (false, false);
         }
 
+        this.scaler = new FileBlendshapeScalerFactory().build(Logger);
+
         if (FILE_LOG)
         {
             this.logger = PicoDataLoggerFactory.build(LOGGER_PATH);
@@ -75,100 +95,100 @@ public sealed class Pico4SAFTExtTrackingModule : ExtTrackingModule, IDisposable
         return trackingState;
     }
 
-    private static unsafe void UpdateEye(float* pxrShape, UnifiedSingleEyeData* left, UnifiedSingleEyeData* right)
+    private unsafe void UpdateEye(float* pxrShape, UnifiedSingleEyeData* left, UnifiedSingleEyeData* right)
     {
         // to be tested, not entirely sure how Pxr blink/squint will translate to Openness.
-        left->Openness = 1f - pxrShape[(int)BlendShapeIndex.EyeBlink_L];
-        right->Openness = 1f - pxrShape[(int)BlendShapeIndex.EyeBlink_R];
+        left->Openness = this.scaler!.EyeExpressionShapeScale(1f - pxrShape[(int)BlendShapeIndex.EyeBlink_L], EyeExpressions.EyeOpennessLeft);
+        right->Openness = this.scaler!.EyeExpressionShapeScale(1f - pxrShape[(int)BlendShapeIndex.EyeBlink_R], EyeExpressions.EyeOpennessRight);
 
-        left->Gaze.x = pxrShape[(int)BlendShapeIndex.EyeLookIn_L] - pxrShape[(int)BlendShapeIndex.EyeLookOut_L];
-        left->Gaze.y = pxrShape[(int)BlendShapeIndex.EyeLookUp_L] - pxrShape[(int)BlendShapeIndex.EyeLookDown_L];
+        left->Gaze.x = this.scaler!.EyeExpressionShapeScale(pxrShape[(int)BlendShapeIndex.EyeLookIn_L] - pxrShape[(int)BlendShapeIndex.EyeLookOut_L], EyeExpressions.EyeXGazeLeft);
+        left->Gaze.y = this.scaler!.EyeExpressionShapeScale(pxrShape[(int)BlendShapeIndex.EyeLookUp_L] - pxrShape[(int)BlendShapeIndex.EyeLookDown_L], EyeExpressions.EyeYGazeLeft);
 
-        right->Gaze.x = pxrShape[(int)BlendShapeIndex.EyeLookOut_R] - pxrShape[(int)BlendShapeIndex.EyeLookIn_R];
-        right->Gaze.y = pxrShape[(int)BlendShapeIndex.EyeLookUp_R] - pxrShape[(int)BlendShapeIndex.EyeLookDown_R];
+        right->Gaze.x = this.scaler!.EyeExpressionShapeScale(pxrShape[(int)BlendShapeIndex.EyeLookOut_R] - pxrShape[(int)BlendShapeIndex.EyeLookIn_R], EyeExpressions.EyeXGazeRight);
+        right->Gaze.y = this.scaler!.EyeExpressionShapeScale(pxrShape[(int)BlendShapeIndex.EyeLookUp_R] - pxrShape[(int)BlendShapeIndex.EyeLookDown_R], EyeExpressions.EyeXGazeLeft);
     }
 
-    private static unsafe void UpdateEyeExpression(float* pxrShape, UnifiedExpressionShape* unifiedShape)
+    private unsafe void UpdateEyeExpression(float* pxrShape, UnifiedExpressionShape* unifiedShape)
     {
         #region Brow Shapes
-        unifiedShape[(int)UnifiedExpressions.BrowInnerUpLeft].Weight = pxrShape[(int)BlendShapeIndex.BrowInnerUp];
-        unifiedShape[(int)UnifiedExpressions.BrowInnerUpRight].Weight = pxrShape[(int)BlendShapeIndex.BrowInnerUp];
-        unifiedShape[(int)UnifiedExpressions.BrowOuterUpLeft].Weight = pxrShape[(int)BlendShapeIndex.BrowOuterUp_L];
-        unifiedShape[(int)UnifiedExpressions.BrowOuterUpRight].Weight = pxrShape[(int)BlendShapeIndex.BrowOuterUp_R];
-        unifiedShape[(int)UnifiedExpressions.BrowLowererLeft].Weight = pxrShape[(int)BlendShapeIndex.BrowDown_L];
-        unifiedShape[(int)UnifiedExpressions.BrowPinchLeft].Weight = pxrShape[(int)BlendShapeIndex.BrowDown_L];
-        unifiedShape[(int)UnifiedExpressions.BrowLowererRight].Weight = pxrShape[(int)BlendShapeIndex.BrowDown_R];
-        unifiedShape[(int)UnifiedExpressions.BrowPinchRight].Weight = pxrShape[(int)BlendShapeIndex.BrowDown_R];
+        unifiedShape[(int)UnifiedExpressions.BrowInnerUpLeft].Weight = this.scaler!.UnifiedExpressionShapeScale(pxrShape[(int)BlendShapeIndex.BrowInnerUp], UnifiedExpressions.BrowInnerUpLeft);
+        unifiedShape[(int)UnifiedExpressions.BrowInnerUpRight].Weight = this.scaler!.UnifiedExpressionShapeScale(pxrShape[(int)BlendShapeIndex.BrowInnerUp], UnifiedExpressions.BrowInnerUpRight);
+        unifiedShape[(int)UnifiedExpressions.BrowOuterUpLeft].Weight = this.scaler!.UnifiedExpressionShapeScale(pxrShape[(int)BlendShapeIndex.BrowOuterUp_L], UnifiedExpressions.BrowOuterUpLeft);
+        unifiedShape[(int)UnifiedExpressions.BrowOuterUpRight].Weight = this.scaler!.UnifiedExpressionShapeScale(pxrShape[(int)BlendShapeIndex.BrowOuterUp_R], UnifiedExpressions.BrowOuterUpRight);
+        unifiedShape[(int)UnifiedExpressions.BrowLowererLeft].Weight = this.scaler!.UnifiedExpressionShapeScale(pxrShape[(int)BlendShapeIndex.BrowDown_L], UnifiedExpressions.BrowLowererLeft);
+        unifiedShape[(int)UnifiedExpressions.BrowPinchLeft].Weight = this.scaler!.UnifiedExpressionShapeScale(pxrShape[(int)BlendShapeIndex.BrowDown_L], UnifiedExpressions.BrowPinchLeft);
+        unifiedShape[(int)UnifiedExpressions.BrowLowererRight].Weight = this.scaler!.UnifiedExpressionShapeScale(pxrShape[(int)BlendShapeIndex.BrowDown_R], UnifiedExpressions.BrowLowererRight);
+        unifiedShape[(int)UnifiedExpressions.BrowPinchRight].Weight = this.scaler!.UnifiedExpressionShapeScale(pxrShape[(int)BlendShapeIndex.BrowDown_R], UnifiedExpressions.BrowPinchRight);
         #endregion
         #region Eye Shapes
-        unifiedShape[(int)UnifiedExpressions.EyeSquintLeft].Weight = pxrShape[(int)BlendShapeIndex.EyeSquint_L];
-        unifiedShape[(int)UnifiedExpressions.EyeSquintRight].Weight = pxrShape[(int)BlendShapeIndex.EyeSquint_R];
-        unifiedShape[(int)UnifiedExpressions.EyeWideLeft].Weight = pxrShape[(int)BlendShapeIndex.EyeWide_L];
-        unifiedShape[(int)UnifiedExpressions.EyeWideRight].Weight = pxrShape[(int)BlendShapeIndex.EyeWide_R];
+        unifiedShape[(int)UnifiedExpressions.EyeSquintLeft].Weight = this.scaler!.UnifiedExpressionShapeScale(pxrShape[(int)BlendShapeIndex.EyeSquint_L], UnifiedExpressions.EyeSquintLeft);
+        unifiedShape[(int)UnifiedExpressions.EyeSquintRight].Weight = this.scaler!.UnifiedExpressionShapeScale(pxrShape[(int)BlendShapeIndex.EyeSquint_R], UnifiedExpressions.EyeSquintRight);
+        unifiedShape[(int)UnifiedExpressions.EyeWideLeft].Weight = this.scaler!.UnifiedExpressionShapeScale(pxrShape[(int)BlendShapeIndex.EyeWide_L], UnifiedExpressions.EyeWideLeft);
+        unifiedShape[(int)UnifiedExpressions.EyeWideRight].Weight = this.scaler!.UnifiedExpressionShapeScale(pxrShape[(int)BlendShapeIndex.EyeWide_R], UnifiedExpressions.EyeWideRight);
         #endregion
     }
 
-    private static unsafe void UpdateExpression(float* pxrShape, UnifiedExpressionShape* unifiedShape)
+    private unsafe void UpdateExpression(float* pxrShape, UnifiedExpressionShape* unifiedShape)
     {
         // TODO: Map Viseme shapes onto face shapes.
 
         #region Jaw
-        unifiedShape[(int)UnifiedExpressions.JawOpen].Weight = pxrShape[(int)BlendShapeIndex.JawOpen];
-        unifiedShape[(int)UnifiedExpressions.JawLeft].Weight = pxrShape[(int)BlendShapeIndex.JawLeft];
-        unifiedShape[(int)UnifiedExpressions.JawRight].Weight = pxrShape[(int)BlendShapeIndex.JawRight];
-        unifiedShape[(int)UnifiedExpressions.JawForward].Weight = pxrShape[(int)BlendShapeIndex.JawForward];
-        unifiedShape[(int)UnifiedExpressions.MouthClosed].Weight = pxrShape[(int)BlendShapeIndex.MouthClose];
+        unifiedShape[(int)UnifiedExpressions.JawOpen].Weight = this.scaler!.UnifiedExpressionShapeScale(pxrShape[(int)BlendShapeIndex.JawOpen], UnifiedExpressions.JawOpen);
+        unifiedShape[(int)UnifiedExpressions.JawLeft].Weight = this.scaler!.UnifiedExpressionShapeScale(pxrShape[(int)BlendShapeIndex.JawLeft], UnifiedExpressions.JawLeft);
+        unifiedShape[(int)UnifiedExpressions.JawRight].Weight = this.scaler!.UnifiedExpressionShapeScale(pxrShape[(int)BlendShapeIndex.JawRight], UnifiedExpressions.JawRight);
+        unifiedShape[(int)UnifiedExpressions.JawForward].Weight = this.scaler!.UnifiedExpressionShapeScale(pxrShape[(int)BlendShapeIndex.JawForward], UnifiedExpressions.JawForward);
+        unifiedShape[(int)UnifiedExpressions.MouthClosed].Weight = this.scaler!.UnifiedExpressionShapeScale(pxrShape[(int)BlendShapeIndex.MouthClose], UnifiedExpressions.MouthClosed);
         #endregion
         #region Cheek
-        unifiedShape[(int)UnifiedExpressions.CheekPuffLeft].Weight = pxrShape[(int)BlendShapeIndex.CheekPuff];
-        unifiedShape[(int)UnifiedExpressions.CheekPuffRight].Weight = pxrShape[(int)BlendShapeIndex.CheekPuff];
-        unifiedShape[(int)UnifiedExpressions.CheekSquintLeft].Weight = pxrShape[(int)BlendShapeIndex.CheekSquint_L];
-        unifiedShape[(int)UnifiedExpressions.CheekSquintRight].Weight = pxrShape[(int)BlendShapeIndex.CheekSquint_R];
+        unifiedShape[(int)UnifiedExpressions.CheekPuffLeft].Weight = this.scaler!.UnifiedExpressionShapeScale(pxrShape[(int)BlendShapeIndex.CheekPuff], UnifiedExpressions.CheekPuffLeft);
+        unifiedShape[(int)UnifiedExpressions.CheekPuffRight].Weight = this.scaler!.UnifiedExpressionShapeScale(pxrShape[(int)BlendShapeIndex.CheekPuff], UnifiedExpressions.CheekPuffRight);
+        unifiedShape[(int)UnifiedExpressions.CheekSquintLeft].Weight = this.scaler!.UnifiedExpressionShapeScale(pxrShape[(int)BlendShapeIndex.CheekSquint_L], UnifiedExpressions.CheekSquintLeft);
+        unifiedShape[(int)UnifiedExpressions.CheekSquintRight].Weight = this.scaler!.UnifiedExpressionShapeScale(pxrShape[(int)BlendShapeIndex.CheekSquint_R], UnifiedExpressions.CheekSquintRight);
         #endregion
         #region Nose
-        unifiedShape[(int)UnifiedExpressions.NoseSneerLeft].Weight = pxrShape[(int)BlendShapeIndex.NoseSneer_L];
-        unifiedShape[(int)UnifiedExpressions.NoseSneerRight].Weight = pxrShape[(int)BlendShapeIndex.NoseSneer_R];
+        unifiedShape[(int)UnifiedExpressions.NoseSneerLeft].Weight = this.scaler!.UnifiedExpressionShapeScale(pxrShape[(int)BlendShapeIndex.NoseSneer_L], UnifiedExpressions.NoseSneerLeft);
+        unifiedShape[(int)UnifiedExpressions.NoseSneerRight].Weight = this.scaler!.UnifiedExpressionShapeScale(pxrShape[(int)BlendShapeIndex.NoseSneer_R], UnifiedExpressions.NoseSneerRight);
         #endregion
         #region Mouth
-        unifiedShape[(int)UnifiedExpressions.MouthUpperUpLeft].Weight = pxrShape[(int)BlendShapeIndex.MouthUpperUp_L];
-        unifiedShape[(int)UnifiedExpressions.MouthUpperUpRight].Weight = pxrShape[(int)BlendShapeIndex.MouthUpperUp_R];
-        unifiedShape[(int)UnifiedExpressions.MouthLowerDownLeft].Weight = pxrShape[(int)BlendShapeIndex.MouthLowerDown_L];
-        unifiedShape[(int)UnifiedExpressions.MouthLowerDownRight].Weight = pxrShape[(int)BlendShapeIndex.MouthLowerDown_R];
-        unifiedShape[(int)UnifiedExpressions.MouthFrownLeft].Weight = pxrShape[(int)BlendShapeIndex.MouthFrown_L];
-        unifiedShape[(int)UnifiedExpressions.MouthFrownRight].Weight = pxrShape[(int)BlendShapeIndex.MouthFrown_R];
-        unifiedShape[(int)UnifiedExpressions.MouthDimpleLeft].Weight = pxrShape[(int)BlendShapeIndex.MouthDimple_L];
-        unifiedShape[(int)UnifiedExpressions.MouthDimpleRight].Weight = pxrShape[(int)BlendShapeIndex.MouthDimple_R];
-        unifiedShape[(int)UnifiedExpressions.MouthUpperLeft].Weight = pxrShape[(int)BlendShapeIndex.MouthLeft];
-        unifiedShape[(int)UnifiedExpressions.MouthLowerLeft].Weight = pxrShape[(int)BlendShapeIndex.MouthLeft];
-        unifiedShape[(int)UnifiedExpressions.MouthUpperRight].Weight = pxrShape[(int)BlendShapeIndex.MouthRight];
-        unifiedShape[(int)UnifiedExpressions.MouthLowerRight].Weight = pxrShape[(int)BlendShapeIndex.MouthRight];
-        unifiedShape[(int)UnifiedExpressions.MouthPressLeft].Weight = pxrShape[(int)BlendShapeIndex.MouthPress_L];
-        unifiedShape[(int)UnifiedExpressions.MouthPressRight].Weight = pxrShape[(int)BlendShapeIndex.MouthPress_R];
-        unifiedShape[(int)UnifiedExpressions.MouthRaiserLower].Weight = pxrShape[(int)BlendShapeIndex.MouthShrugLower];
-        unifiedShape[(int)UnifiedExpressions.MouthRaiserUpper].Weight = pxrShape[(int)BlendShapeIndex.MouthShrugUpper];
-        unifiedShape[(int)UnifiedExpressions.MouthCornerPullLeft].Weight = pxrShape[(int)BlendShapeIndex.MouthSmile_L];
-        unifiedShape[(int)UnifiedExpressions.MouthCornerSlantLeft].Weight = pxrShape[(int)BlendShapeIndex.MouthSmile_L];
-        unifiedShape[(int)UnifiedExpressions.MouthCornerPullRight].Weight = pxrShape[(int)BlendShapeIndex.MouthSmile_R];
-        unifiedShape[(int)UnifiedExpressions.MouthCornerSlantRight].Weight = pxrShape[(int)BlendShapeIndex.MouthSmile_R];
-        unifiedShape[(int)UnifiedExpressions.MouthStretchLeft].Weight = pxrShape[(int)BlendShapeIndex.MouthStretch_L];
-        unifiedShape[(int)UnifiedExpressions.MouthStretchRight].Weight = pxrShape[(int)BlendShapeIndex.MouthStretch_R];
+        unifiedShape[(int)UnifiedExpressions.MouthUpperUpLeft].Weight = this.scaler!.UnifiedExpressionShapeScale(pxrShape[(int)BlendShapeIndex.MouthUpperUp_L], UnifiedExpressions.MouthUpperUpLeft);
+        unifiedShape[(int)UnifiedExpressions.MouthUpperUpRight].Weight = this.scaler!.UnifiedExpressionShapeScale(pxrShape[(int)BlendShapeIndex.MouthUpperUp_R], UnifiedExpressions.MouthUpperUpRight);
+        unifiedShape[(int)UnifiedExpressions.MouthLowerDownLeft].Weight = this.scaler!.UnifiedExpressionShapeScale(pxrShape[(int)BlendShapeIndex.MouthLowerDown_L], UnifiedExpressions.MouthLowerDownLeft);
+        unifiedShape[(int)UnifiedExpressions.MouthLowerDownRight].Weight = this.scaler!.UnifiedExpressionShapeScale(pxrShape[(int)BlendShapeIndex.MouthLowerDown_R], UnifiedExpressions.MouthLowerDownRight);
+        unifiedShape[(int)UnifiedExpressions.MouthFrownLeft].Weight = this.scaler!.UnifiedExpressionShapeScale(pxrShape[(int)BlendShapeIndex.MouthFrown_L], UnifiedExpressions.MouthFrownLeft);
+        unifiedShape[(int)UnifiedExpressions.MouthFrownRight].Weight = this.scaler!.UnifiedExpressionShapeScale(pxrShape[(int)BlendShapeIndex.MouthFrown_R], UnifiedExpressions.MouthFrownRight);
+        unifiedShape[(int)UnifiedExpressions.MouthDimpleLeft].Weight = this.scaler!.UnifiedExpressionShapeScale(pxrShape[(int)BlendShapeIndex.MouthDimple_L], UnifiedExpressions.MouthDimpleLeft);
+        unifiedShape[(int)UnifiedExpressions.MouthDimpleRight].Weight = this.scaler!.UnifiedExpressionShapeScale(pxrShape[(int)BlendShapeIndex.MouthDimple_R], UnifiedExpressions.MouthDimpleRight);
+        unifiedShape[(int)UnifiedExpressions.MouthUpperLeft].Weight = this.scaler!.UnifiedExpressionShapeScale(pxrShape[(int)BlendShapeIndex.MouthLeft], UnifiedExpressions.MouthUpperLeft);
+        unifiedShape[(int)UnifiedExpressions.MouthLowerLeft].Weight = this.scaler!.UnifiedExpressionShapeScale(pxrShape[(int)BlendShapeIndex.MouthLeft], UnifiedExpressions.MouthLowerLeft);
+        unifiedShape[(int)UnifiedExpressions.MouthUpperRight].Weight = this.scaler!.UnifiedExpressionShapeScale(pxrShape[(int)BlendShapeIndex.MouthRight], UnifiedExpressions.MouthUpperRight);
+        unifiedShape[(int)UnifiedExpressions.MouthLowerRight].Weight = this.scaler!.UnifiedExpressionShapeScale(pxrShape[(int)BlendShapeIndex.MouthRight], UnifiedExpressions.MouthLowerRight);
+        unifiedShape[(int)UnifiedExpressions.MouthPressLeft].Weight = this.scaler!.UnifiedExpressionShapeScale(pxrShape[(int)BlendShapeIndex.MouthPress_L], UnifiedExpressions.MouthPressLeft);
+        unifiedShape[(int)UnifiedExpressions.MouthPressRight].Weight = this.scaler!.UnifiedExpressionShapeScale(pxrShape[(int)BlendShapeIndex.MouthPress_R], UnifiedExpressions.MouthPressRight);
+        unifiedShape[(int)UnifiedExpressions.MouthRaiserLower].Weight = this.scaler!.UnifiedExpressionShapeScale(pxrShape[(int)BlendShapeIndex.MouthShrugLower], UnifiedExpressions.MouthRaiserLower);
+        unifiedShape[(int)UnifiedExpressions.MouthRaiserUpper].Weight = this.scaler!.UnifiedExpressionShapeScale(pxrShape[(int)BlendShapeIndex.MouthShrugUpper], UnifiedExpressions.MouthRaiserUpper);
+        unifiedShape[(int)UnifiedExpressions.MouthCornerPullLeft].Weight = this.scaler!.UnifiedExpressionShapeScale(pxrShape[(int)BlendShapeIndex.MouthSmile_L], UnifiedExpressions.MouthCornerPullLeft);
+        unifiedShape[(int)UnifiedExpressions.MouthCornerSlantLeft].Weight = this.scaler!.UnifiedExpressionShapeScale(pxrShape[(int)BlendShapeIndex.MouthSmile_L], UnifiedExpressions.MouthCornerSlantLeft);
+        unifiedShape[(int)UnifiedExpressions.MouthCornerPullRight].Weight = this.scaler!.UnifiedExpressionShapeScale(pxrShape[(int)BlendShapeIndex.MouthSmile_R], UnifiedExpressions.MouthCornerPullRight);
+        unifiedShape[(int)UnifiedExpressions.MouthCornerSlantRight].Weight = this.scaler!.UnifiedExpressionShapeScale(pxrShape[(int)BlendShapeIndex.MouthSmile_R], UnifiedExpressions.MouthCornerSlantRight);
+        unifiedShape[(int)UnifiedExpressions.MouthStretchLeft].Weight = this.scaler!.UnifiedExpressionShapeScale(pxrShape[(int)BlendShapeIndex.MouthStretch_L], UnifiedExpressions.MouthStretchLeft);
+        unifiedShape[(int)UnifiedExpressions.MouthStretchRight].Weight = this.scaler!.UnifiedExpressionShapeScale(pxrShape[(int)BlendShapeIndex.MouthStretch_R], UnifiedExpressions.MouthStretchRight);
         #endregion
         #region Lip
-        unifiedShape[(int)UnifiedExpressions.LipFunnelUpperLeft].Weight = pxrShape[(int)BlendShapeIndex.MouthFunnel];
-        unifiedShape[(int)UnifiedExpressions.LipFunnelUpperRight].Weight = pxrShape[(int)BlendShapeIndex.MouthFunnel];
-        unifiedShape[(int)UnifiedExpressions.LipFunnelLowerLeft].Weight = pxrShape[(int)BlendShapeIndex.MouthFunnel];
-        unifiedShape[(int)UnifiedExpressions.LipFunnelLowerRight].Weight = pxrShape[(int)BlendShapeIndex.MouthFunnel];
-        unifiedShape[(int)UnifiedExpressions.LipPuckerUpperLeft].Weight = pxrShape[(int)BlendShapeIndex.MouthPucker];
-        unifiedShape[(int)UnifiedExpressions.LipPuckerUpperRight].Weight = pxrShape[(int)BlendShapeIndex.MouthPucker];
-        unifiedShape[(int)UnifiedExpressions.LipPuckerLowerLeft].Weight = pxrShape[(int)BlendShapeIndex.MouthPucker];
-        unifiedShape[(int)UnifiedExpressions.LipPuckerLowerRight].Weight = pxrShape[(int)BlendShapeIndex.MouthPucker];
-        unifiedShape[(int)UnifiedExpressions.LipSuckUpperLeft].Weight = pxrShape[(int)BlendShapeIndex.MouthRollUpper];
-        unifiedShape[(int)UnifiedExpressions.LipSuckUpperRight].Weight = pxrShape[(int)BlendShapeIndex.MouthRollUpper];
-        unifiedShape[(int)UnifiedExpressions.LipSuckLowerLeft].Weight = pxrShape[(int)BlendShapeIndex.MouthRollLower];
-        unifiedShape[(int)UnifiedExpressions.LipSuckLowerRight].Weight = pxrShape[(int)BlendShapeIndex.MouthRollLower];
+        unifiedShape[(int)UnifiedExpressions.LipFunnelUpperLeft].Weight = this.scaler!.UnifiedExpressionShapeScale(pxrShape[(int)BlendShapeIndex.MouthFunnel], UnifiedExpressions.LipFunnelUpperLeft);
+        unifiedShape[(int)UnifiedExpressions.LipFunnelUpperRight].Weight = this.scaler!.UnifiedExpressionShapeScale(pxrShape[(int)BlendShapeIndex.MouthFunnel], UnifiedExpressions.LipFunnelUpperRight);
+        unifiedShape[(int)UnifiedExpressions.LipFunnelLowerLeft].Weight = this.scaler!.UnifiedExpressionShapeScale(pxrShape[(int)BlendShapeIndex.MouthFunnel], UnifiedExpressions.LipFunnelLowerLeft);
+        unifiedShape[(int)UnifiedExpressions.LipFunnelLowerRight].Weight = this.scaler!.UnifiedExpressionShapeScale(pxrShape[(int)BlendShapeIndex.MouthFunnel], UnifiedExpressions.LipFunnelLowerRight);
+        unifiedShape[(int)UnifiedExpressions.LipPuckerUpperLeft].Weight = this.scaler!.UnifiedExpressionShapeScale(pxrShape[(int)BlendShapeIndex.MouthPucker], UnifiedExpressions.LipPuckerUpperLeft);
+        unifiedShape[(int)UnifiedExpressions.LipPuckerUpperRight].Weight = this.scaler!.UnifiedExpressionShapeScale(pxrShape[(int)BlendShapeIndex.MouthPucker], UnifiedExpressions.LipPuckerUpperRight);
+        unifiedShape[(int)UnifiedExpressions.LipPuckerLowerLeft].Weight = this.scaler!.UnifiedExpressionShapeScale(pxrShape[(int)BlendShapeIndex.MouthPucker], UnifiedExpressions.LipPuckerLowerLeft);
+        unifiedShape[(int)UnifiedExpressions.LipPuckerLowerRight].Weight = this.scaler!.UnifiedExpressionShapeScale(pxrShape[(int)BlendShapeIndex.MouthPucker], UnifiedExpressions.LipPuckerLowerRight);
+        unifiedShape[(int)UnifiedExpressions.LipSuckUpperLeft].Weight = this.scaler!.UnifiedExpressionShapeScale(pxrShape[(int)BlendShapeIndex.MouthRollUpper], UnifiedExpressions.LipSuckUpperLeft);
+        unifiedShape[(int)UnifiedExpressions.LipSuckUpperRight].Weight = this.scaler!.UnifiedExpressionShapeScale(pxrShape[(int)BlendShapeIndex.MouthRollUpper], UnifiedExpressions.LipSuckUpperRight);
+        unifiedShape[(int)UnifiedExpressions.LipSuckLowerLeft].Weight = this.scaler!.UnifiedExpressionShapeScale(pxrShape[(int)BlendShapeIndex.MouthRollLower], UnifiedExpressions.LipSuckLowerLeft);
+        unifiedShape[(int)UnifiedExpressions.LipSuckLowerRight].Weight = this.scaler!.UnifiedExpressionShapeScale(pxrShape[(int)BlendShapeIndex.MouthRollLower], UnifiedExpressions.LipSuckLowerRight);
         #endregion
         #region Tongue
-        unifiedShape[(int)UnifiedExpressions.TongueOut].Weight = pxrShape[(int)BlendShapeIndex.TongueOut];
+        unifiedShape[(int)UnifiedExpressions.TongueOut].Weight = this.scaler!.UnifiedExpressionShapeScale(pxrShape[(int)BlendShapeIndex.TongueOut], UnifiedExpressions.TongueOut);
         #endregion
     }
 
