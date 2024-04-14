@@ -3,14 +3,14 @@
   "AuthorName": "Mitchell Taylor",
   "DllFileName": "Pico4SAFTExtTrackingModule.dll",
   "Downloads": 9892,
-  "DownloadUrl": "https://github.com/regzo2/PicoStreamingAssistantFTUDP/releases/download/1.4.0/Pico4ProModule.zip",
-  "LastUpdated": "2024-04-09T16:28:00Z",
-  "ModuleDescription": "The module provides eye and face tracking compatibility with PICO Connect and Business Streaming.",
+  "DownloadUrl": "https://github.com/regzo2/PicoStreamingAssistantFTUDP/releases/download/1.4.1/Pico4ProModule.zip",
+  "LastUpdated": "2024-04-14T15:00:00Z",
+  "ModuleDescription": "The module provides eye and face tracking compatibility with PICO Connect, Streaming Assistant and Business Streaming.",
   "ModuleName": "Pico4SAFTExtTrackingModule",
   "ModulePageUrl": "https://github.com/regzo2/PicoStreamingAssistantFTUDP/tree/vrcfacetracking-module",
   "Rating": 4.341463414634147,
   "Ratings": 164,
   "RatingSum": 712,
-  "UsageInstructions": "Requires PICO Connect (for PICO 4 PRO) or Business Streaming (for PICO 4 enterprise). This module will listen for any face tracking data coming from the Pico Streaming Assistant.",
-  "Version": "1.4"
+  "UsageInstructions": "Requires PICO Connect/Streaming Assistant (for PICO 4 PRO) or Business Streaming (for PICO 4 enterprise). This module will listen for any face tracking data coming from the Pico Streaming Assistant.",
+  "Version": "1.4.1"
 }
