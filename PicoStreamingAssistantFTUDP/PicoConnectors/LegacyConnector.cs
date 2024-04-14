@@ -114,7 +114,7 @@ public sealed class LegacyConnector : IPicoConnector
                 retry++;
                 // Magic
                 // Close the pico_et_ft_bt_bridge.exe process and reinitialize it.
-                // It will listen to UDP port 29763 before pico_et_ft_bt_bridge.exe runs.
+                // It will listen to UDP port before pico_et_ft_bt_bridge.exe runs.
                 // Note: exclusively to simplify older versions of the FT bridge,
                 // the bridge now works without any need for process killing.
                 Process proc = new()
