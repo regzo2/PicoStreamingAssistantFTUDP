@@ -66,7 +66,7 @@ public sealed class Pico4SAFTExtTrackingModule : ExtTrackingModule, IDisposable
         }
 
         Logger.LogInformation("Initializing {} data stream.", this.connector.GetProcessName());
-        while (!this.disposedValue && !this.connector.Connect()) Thread.Sleep(4_000);
+        /*while (!this.disposedValue && !*/this.connector.Connect()/*) Thread.Sleep(4_000)*/;
 
         if (this.disposedValue)
         {

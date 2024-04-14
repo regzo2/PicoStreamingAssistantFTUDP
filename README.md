@@ -38,11 +38,6 @@ face tracking data.
 
 You'll find the module in `PicoStreamingAssistantFTUDP\PicoStreamingAssistantFTUDP\bin\Debug\net7.0\Pico4SAFTExtTrackingModule.dll`.
 
-#### Compiling VRCFaceTracking.Core
-
-- If you get an error about `vcruntime140.dll`, modify (in the file `VRCFaceTracking\VRCFaceTracking.Core\VRCFaceTracking.Core.csproj`) the reference to `C:\Windows\System32\vcruntime140.dll`
-- If you get an error about `fti_osc.dll`, modify (in the file `VRCFaceTracking\VRCFaceTracking.Core\VRCFaceTracking.Core.csproj`) the reference to ? (I just removed it lmao)
-
 ## Credits
 - [Ben](https://github.com/benaclejames/) for VRCFaceTracking!
 - [TofuLemon](https://github.com/ULemon/) with help testing, troubleshooting and providing crucial information that lead to the development of this module!
