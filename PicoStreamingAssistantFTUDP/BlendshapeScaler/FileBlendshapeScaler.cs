@@ -1,9 +1,7 @@
 ﻿using System.Globalization;
 using System.IO.Abstractions;
 using System.Text;
-using Newtonsoft.Json;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json.Serialization;
 using VRCFaceTracking.Core.Params.Expressions;
 using Newtonsoft.Json.Linq;
 

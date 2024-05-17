@@ -1,6 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
 using System.IO.Abstractions;
-using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
 namespace Pico4SAFTExtTrackingModule.PicoConnectors.ConfigChecker.PicoConnect;
