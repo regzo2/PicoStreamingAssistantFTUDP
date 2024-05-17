@@ -1,6 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 using System.IO.Abstractions;
-using System.Text.Json;
+using Newtonsoft.Json;
 
 namespace Pico4SAFTExtTrackingModule.PicoConnectors.ConfigChecker.PicoConnect;
 
@@ -24,7 +24,7 @@ public sealed class PicoConnectConfigChecker : IConfigChecker
         try
         {
             string configContents = fileSystem.File.ReadAllText(configLocation);
-            return JsonSerializer.Deserialize<Config>(configContents);
+            return JsonConvert.DeserializeObject<Config>(configContents);
         }
         catch (Exception ex)
         {

@@ -1,10 +1,11 @@
 ﻿using System.Globalization;
 using System.IO.Abstractions;
 using System.Text;
-using System.Text.Json;
+using Newtonsoft.Json;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Serialization;
 using VRCFaceTracking.Core.Params.Expressions;
+using Newtonsoft.Json.Linq;
 
 namespace Pico4SAFTExtTrackingModule.BlendshapeScaler;
 
@@ -41,21 +42,20 @@ public class FileBlendshapeScaler : IBlendshapeScaler
         try
         {
             string stringifiedJson = this.fileSystem.File.ReadAllText(this.configPath);
-            JsonElement scales = JsonDocument.Parse(stringifiedJson).RootElement.GetProperty("scales");
-            foreach (var jsonProperty in scales.EnumerateObject())
+            JObject scalesObject = JObject.Parse(stringifiedJson);
+            JToken scales = scalesObject["scales"];
+            foreach (JProperty jsonProperty in scales)
             {
-                if (Logger != null) Logger.LogDebug("Trying to parse {}...", jsonProperty.Name);
-                EyeExpressions eyeExpression;
-                if (Enum.TryParse<EyeExpressions>(jsonProperty.Name, out eyeExpression))
+                if (Logger != null) Logger.LogDebug($"Trying to parse {jsonProperty.Name}...");
+                if (Enum.TryParse<EyeExpressions>(jsonProperty.Name, out EyeExpressions eyeExpression))
                 {
-                    if (Logger != null) Logger.LogDebug("{} matches as EyeExpression! Set its scaling to {}", jsonProperty.Name, jsonProperty.Value.ToString());
-                    this.eyeScales.Add(eyeExpression, jsonProperty.Value.GetSingle());
+                    if (Logger != null) Logger.LogDebug($"{jsonProperty.Name} matches as EyeExpression! Set its scaling to {jsonProperty.Value}");
+                    this.eyeScales.Add(eyeExpression, jsonProperty.Value.ToObject<float>());
                 }
-                UnifiedExpressions unifiedExpression;
-                if (Enum.TryParse<UnifiedExpressions>(jsonProperty.Name, out unifiedExpression))
+                if (Enum.TryParse<UnifiedExpressions>(jsonProperty.Name, out UnifiedExpressions unifiedExpression))
                 {
-                    if (Logger != null) Logger.LogDebug("{} matches as UnifiedExpression! Set its scaling to {}", jsonProperty.Name, jsonProperty.Value.ToString());
-                    this.unifiedScales.Add(unifiedExpression, jsonProperty.Value.GetSingle());
+                    if (Logger != null) Logger.LogDebug($"{jsonProperty.Name} matches as UnifiedExpression! Set its scaling to {jsonProperty.Value}");
+                    this.unifiedScales.Add(unifiedExpression, jsonProperty.Value.ToObject<float>());
                 }
             }
             return true;
