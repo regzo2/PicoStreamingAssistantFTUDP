@@ -1,48 +1,39 @@
 ﻿using Microsoft.Extensions.Logging;
 using System.IO.Abstractions;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace Pico4SAFTExtTrackingModule.PicoConnectors.ConfigChecker.PicoConnect;
 
 public sealed class PicoConnectConfigChecker : IConfigChecker
 {
-    private readonly Lazy<Config> picoConfig;
     private readonly ILogger logger;
+    private readonly IFileSystem fileSystem;
 
     public PicoConnectConfigChecker(ILogger logger, IFileSystem fileSystem)
     {
         this.logger = logger;
-        this.picoConfig = new Lazy<Config>(() => GetConfig(fileSystem, logger));
+        this.fileSystem = fileSystem;
     }
 
     public PicoConnectConfigChecker(ILogger logger) : this(logger, new FileSystem()) { }
-
-    private static Config GetConfig(IFileSystem fileSystem, ILogger? logger = null)
+    public int GetTransferProtocolNumber(PicoPrograms program)
     {
         string configLocation = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "PICO Connect\\settings.json");
-        logger.LogInformation("Expecting PICO Connect settings file at '" + configLocation + "'");
+
+        if (program != PicoPrograms.PicoConnect) throw new ArgumentException("PicoConnectConfigChecker class only checks for PICO Connect config files");
+
         try
         {
-            string configContents = fileSystem.File.ReadAllText(configLocation);
-            return JsonConvert.DeserializeObject<Config>(configContents);
+            JObject config = JObject.Parse(fileSystem.File.ReadAllText(configLocation));
+            JObject lab = (JObject)config["lab"];
+            int protocolNumber = (int)lab["faceTrackingTransferProtocol"];
+            return protocolNumber;
         }
         catch (Exception ex)
         {
-            logger?.LogError("Pico Connect Config deserialize failed: " + ex.ToString());
-            return null;
+            logger.LogError("Get pico transfer protocol number failed: " + ex);
+            return 0;
         }
-    }
-
-    public int GetTransferProtocolNumber(PicoPrograms program)
-    {
-        if (program != PicoPrograms.PicoConnect) throw new ArgumentException("PicoConnectConfigChecker class only checks for PICO Connect config files");
-
-        if (picoConfig!.Value == null || picoConfig!.Value.lab == null)
-        {
-            logger.LogError("Couldn't get the value of `faceTrackingTransferProtocol` on the setting.json file");
-            return 0; // send default value
-        }
-
-        return picoConfig!.Value!.lab!.faceTrackingTransferProtocol;
     }
 }
