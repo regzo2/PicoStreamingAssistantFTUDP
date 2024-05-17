@@ -13,7 +13,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VRCFaceTracking.Core", "..\
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Pico4SAFTExtTrackingModule", "PicoStreamingAssistantFTUDP\Pico4SAFTExtTrackingModule.csproj", "{C5FDC7A7-FBA2-46F2-968C-FF81A57C1ED8}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PicoStreamingAssistantFTTests", "PicoStreamingAssistantFTTests\PicoStreamingAssistantFTTests.csproj", "{C4623909-EA05-45B7-B949-31ECB715EA2F}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PicoStreamingAssistantFTTests", "PicoStreamingAssistantFTTests\PicoStreamingAssistantFTTests.csproj", "{C4623909-EA05-45B7-B949-31ECB715EA2F}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VRCFaceTracking.SDK", "..\VRCFaceTracking\VRCFaceTracking.SDK\VRCFaceTracking.SDK.csproj", "{9CE3DF22-4559-4788-9680-FDF924D44D4E}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -75,6 +77,22 @@ Global
 		{C4623909-EA05-45B7-B949-31ECB715EA2F}.Release|x64.Build.0 = Release|Any CPU
 		{C4623909-EA05-45B7-B949-31ECB715EA2F}.Release|x86.ActiveCfg = Release|Any CPU
 		{C4623909-EA05-45B7-B949-31ECB715EA2F}.Release|x86.Build.0 = Release|Any CPU
+		{9CE3DF22-4559-4788-9680-FDF924D44D4E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9CE3DF22-4559-4788-9680-FDF924D44D4E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9CE3DF22-4559-4788-9680-FDF924D44D4E}.Debug|arm64.ActiveCfg = Debug|Any CPU
+		{9CE3DF22-4559-4788-9680-FDF924D44D4E}.Debug|arm64.Build.0 = Debug|Any CPU
+		{9CE3DF22-4559-4788-9680-FDF924D44D4E}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{9CE3DF22-4559-4788-9680-FDF924D44D4E}.Debug|x64.Build.0 = Debug|Any CPU
+		{9CE3DF22-4559-4788-9680-FDF924D44D4E}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{9CE3DF22-4559-4788-9680-FDF924D44D4E}.Debug|x86.Build.0 = Debug|Any CPU
+		{9CE3DF22-4559-4788-9680-FDF924D44D4E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9CE3DF22-4559-4788-9680-FDF924D44D4E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9CE3DF22-4559-4788-9680-FDF924D44D4E}.Release|arm64.ActiveCfg = Release|Any CPU
+		{9CE3DF22-4559-4788-9680-FDF924D44D4E}.Release|arm64.Build.0 = Release|Any CPU
+		{9CE3DF22-4559-4788-9680-FDF924D44D4E}.Release|x64.ActiveCfg = Release|Any CPU
+		{9CE3DF22-4559-4788-9680-FDF924D44D4E}.Release|x64.Build.0 = Release|Any CPU
+		{9CE3DF22-4559-4788-9680-FDF924D44D4E}.Release|x86.ActiveCfg = Release|Any CPU
+		{9CE3DF22-4559-4788-9680-FDF924D44D4E}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
