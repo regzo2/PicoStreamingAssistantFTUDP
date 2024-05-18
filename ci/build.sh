@@ -8,4 +8,4 @@ fi
 script_path=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 base_path=$(dirname "$script_path")
 
-docker run -it --rm -v "$base_path":"/app" mcr.microsoft.com/dotnet/sdk:7.0 bash /app/ci/build-images/build.sh
+docker run -it --rm -v "$base_path":"/app" -e DOCKER_BUILD='true' mcr.microsoft.com/dotnet/sdk:7.0 bash /app/ci/build-images/build.sh
