@@ -3,6 +3,9 @@
 # project
 cd /app/PicoStreamingAssistantFTUDP
 
+# get the dependencies
+git submodule update --init --recursive
+
 # Restore dependencies
 dotnet restore
 
