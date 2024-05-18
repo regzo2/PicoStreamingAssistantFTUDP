@@ -96,7 +96,7 @@ public sealed class LegacyConnector : IPicoConnector
             {
                 fixed (PxrFTInfo* pData = &data)
                 {
-                    result = ReceivePxrData(pData);
+                    result = ReceivePxrData(pData, reinit: false);
                 }
             }
 
@@ -114,7 +114,7 @@ public sealed class LegacyConnector : IPicoConnector
                 retry++;
                 // Magic
                 // Close the pico_et_ft_bt_bridge.exe process and reinitialize it.
-                // It will listen to UDP port 29763 before pico_et_ft_bt_bridge.exe runs.
+                // It will listen to UDP port before pico_et_ft_bt_bridge.exe runs.
                 // Note: exclusively to simplify older versions of the FT bridge,
                 // the bridge now works without any need for process killing.
                 Process proc = new()
@@ -195,7 +195,7 @@ public sealed class LegacyConnector : IPicoConnector
         }
     }
 
-    private unsafe bool ReceivePxrData(PxrFTInfo* pData)
+    private unsafe bool ReceivePxrData(PxrFTInfo* pData, bool reinit = true)
     {
         if (this.IsDisposed()) return false;
 
@@ -217,19 +217,21 @@ public sealed class LegacyConnector : IPicoConnector
         {
             // socket time out
             Logger.LogDebug("Data was not sent within the timeout. {msg}", ex.Message);
-            Logger.LogInformation("Data was not sent within the timeout (is headset hibernated?), reinitialize...");
+            if (reinit) {
+                Logger.LogInformation("Data was not sent within the timeout (is headset hibernated?), reinitialize...");
 
-            // try to reinitialize
-            this.Teardown();
-            lock(this.socketLock) {
-                this.tryReinitializeThread = new Thread(new ThreadStart(() => {
-                    bool connected;
-                    do {
-                        connected = this.Connect();
-                        if (!connected) Thread.Sleep(200); // try again; we have to set a low number because VRCFT won't call `Teardown()` until all the updates are done
-                    } while (!this.IsDisposed() && !connected);
-                }));
-                this.tryReinitializeThread.Start();
+                // try to reinitialize
+                this.Teardown();
+                lock(this.socketLock) {
+                    this.tryReinitializeThread = new Thread(new ThreadStart(() => {
+                        bool connected;
+                        do {
+                            connected = this.Connect();
+                            if (!connected) Thread.Sleep(200); // try again; we have to set a low number because VRCFT won't call `Teardown()` until all the updates are done
+                        } while (!this.IsDisposed() && !connected);
+                    }));
+                    this.tryReinitializeThread.Start();
+                }
             }
 
             return false; // got byte failed

@@ -42,6 +42,8 @@ You'll need [Docker](https://www.docker.com/) in order to run the following step
 
 - Run `bash ci/build.sh`
 
+You'll find the module in `artifacts\Pico4SAFTExtTrackingModule.dll`
+
 ### Manual
 - Use [Visual Studio 2022](https://visualstudio.microsoft.com/es/vs/)
 - Clone [VRCFaceTracking 5.2.3.0](https://github.com/benaclejames/VRCFaceTracking/tree/5.2.3.0); this is done automatically if you run `git submodule update --init --recursive`
@@ -55,6 +57,8 @@ You'll find the module in `PicoStreamingAssistantFTUDP\PicoStreamingAssistantFTU
 ### Docker
 
 - Run `bash ci/tests.sh`
+
+You'll also find a summary in `PicoStreamingAssistantFTUDP\PicoStreamingAssistantFTTests\TestResults\dotnet-test-results.xml`
 
 ### Manual
 
