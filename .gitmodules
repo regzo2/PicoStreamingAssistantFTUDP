@@ -1,0 +1,4 @@
+[submodule "VRCFaceTracking"]
+	path = VRCFaceTracking
+	url = https://github.com/benaclejames/VRCFaceTracking.git
+    branch = 5.2.3.0
