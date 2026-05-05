@@ -1,37 +1,34 @@
-﻿namespace System.IO.Abstractions.TestingHelpers;
+﻿using System.Text;
+
+namespace System.IO.Abstractions.TestingHelpers;
 
 public sealed class MockFileSystem : IFileSystem, IFile
 {
     public IFile File => this;
 
-    private readonly Dictionary<string, string> _contents;
-
-    public MockFileSystem()
-    {
-        this._contents = new Dictionary<string, string>();
-    }
+    private readonly Dictionary<string, StringBuilder> _contents = [];
 
     public void AddFile(string path, MockFileData file)
-    {
-        this._contents.Add(path, file.Contents == null ? "" : file.Contents);
-    }
+        => _contents.Add(path, file.Contents);
 
     public string ReadAllText(string path)
     {
-        string text;
-        bool found = this._contents.TryGetValue(path, out text);
-        if (!found) throw new FileNotFoundException("Couldn't find any file on " + path);
+        if (!_contents.TryGetValue(path, out var text))
+            throw new FileNotFoundException("Couldn't find any file on " + path);
 
-        return text;
+        return text.ToString();
     }
 
     public bool Exists(string path)
-    {
-        return this._contents.ContainsKey(path);
-    }
+        => _contents.ContainsKey(path);
 
     public void WriteAllText(string path, string? contents)
+        => AddFile(path, new MockFileData(contents));
+
+    public TextWriter CreateText(string path)
     {
-        this.AddFile(path, new MockFileData(contents));
+        StringBuilder sb = new();
+        AddFile(path, new MockFileData(sb));
+        return new StringWriter(sb);
     }
 }

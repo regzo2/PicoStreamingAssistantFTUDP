@@ -45,12 +45,12 @@ You'll need [Docker](https://www.docker.com/) in order to run the following step
 You'll find the module in `artifacts\Pico4SAFTExtTrackingModule.dll`
 
 ### Manual
-- Use [Visual Studio 2022](https://visualstudio.microsoft.com/es/vs/)
-- Clone [VRCFaceTracking 5.1.0.0](https://github.com/benaclejames/VRCFaceTracking/tree/5.1.0.0); this is done automatically if you run `git submodule update --init --recursive`
+- Use [Visual Studio 2022 / 2026](https://visualstudio.microsoft.com/es/vs/)
+- Clone [VRCFaceTracking 5.4.4.1](https://github.com/benaclejames/VRCFaceTracking/tree/cf83c3fb3e81e6b6dc4b44619017112cfc8a34c0); this is done automatically if you run `git submodule update --init --recursive`
 - Compile VRCFaceTracking.Core
 - Finally, compile the PICO Module
 
-You'll find the module in `PicoStreamingAssistantFTUDP\PicoStreamingAssistantFTUDP\bin\Debug\net7.0\Pico4SAFTExtTrackingModule.dll`.
+You'll find the module in `PicoStreamingAssistantFTUDP\PicoStreamingAssistantFTUDP\bin\Debug\net10.0\Pico4SAFTExtTrackingModule.dll`.
 
 ## Running the tests
 
@@ -70,3 +70,4 @@ You'll also find a summary in `PicoStreamingAssistantFTUDP\PicoStreamingAssistan
 - [miranda1000](https://github.com/miranda1000) for updating to the latest SA protocol.
 - [lonelyicer](https://github.com/lonelyicer) for the recent contributions.
 - [FuviiPeshu](https://github.com/FuviiPeshu) for SA process detection fix.
+- [frg2089](https://github.com/frg2089) (2023) Use high-performance but memory insecure code refactoring, (2026) Use high-performance and memory secure code refactoring

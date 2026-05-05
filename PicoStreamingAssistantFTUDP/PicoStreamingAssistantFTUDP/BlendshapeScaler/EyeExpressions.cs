@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace Pico4SAFTExtTrackingModule.BlendshapeScaler;
+﻿namespace Pico4SAFTExtTrackingModule.BlendshapeScaler;
 
 public enum EyeExpressions
 {

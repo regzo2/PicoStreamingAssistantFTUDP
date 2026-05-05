@@ -1,217 +1,220 @@
-﻿using System.Globalization;
-using System.IO.Abstractions;
-using System.Text;
+﻿using System.IO.Abstractions;
 using System.Text.Json;
+
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json.Serialization;
+
 using VRCFaceTracking.Core.Params.Expressions;
 
 namespace Pico4SAFTExtTrackingModule.BlendshapeScaler;
 
-public class FileBlendshapeScaler : IBlendshapeScaler
+public sealed partial class FileBlendshapeScaler(ILogger logger, IFileSystem fileSystem, string configPath) : IBlendshapeScaler
 {
-    private ILogger? Logger;
-    private IFileSystem fileSystem;
-    private string configPath;
-
-    private Dictionary<EyeExpressions, float>? eyeScales;
-    private Dictionary<UnifiedExpressions, float>? unifiedScales;
-
-    public FileBlendshapeScaler(ILogger? logger, IFileSystem fileSystem, string configPath)
-    {
-        this.Logger = logger;
-        this.fileSystem = fileSystem;
-        this.configPath = configPath;
-
-        this.eyeScales = null;
-        this.unifiedScales = null;
-    }
+    private Dictionary<EyeExpressions, float>? _eyeScales = null;
+    private Dictionary<UnifiedExpressions, float>? _unifiedScales = null;
 
     public bool LoadConfigFile()
     {
-        this.eyeScales = new Dictionary<EyeExpressions, float>();
-        this.unifiedScales = new Dictionary<UnifiedExpressions, float>();
+        _eyeScales = [];
+        _unifiedScales = [];
 
-        if (!this.fileSystem.File.Exists(this.configPath))
-        {
-            bool createResult = this.CreateConfigFile();
-            if (!createResult) return false; // failed
-        }
+        if (!fileSystem.File.Exists(configPath) && !CreateConfigFile())
+            return false; // failed
 
         try
         {
-            string stringifiedJson = this.fileSystem.File.ReadAllText(this.configPath);
+            string stringifiedJson = fileSystem.File.ReadAllText(configPath);
             JsonElement scales = JsonDocument.Parse(stringifiedJson).RootElement.GetProperty("scales");
             foreach (var jsonProperty in scales.EnumerateObject())
             {
-                if (Logger != null) Logger.LogDebug("Trying to parse {}...", jsonProperty.Name);
-                EyeExpressions eyeExpression;
-                if (Enum.TryParse<EyeExpressions>(jsonProperty.Name, out eyeExpression))
+                LogDebugTryToParse(jsonProperty.Name);
+                if (Enum.TryParse<EyeExpressions>(jsonProperty.Name, out var eyeExpression))
                 {
-                    if (Logger != null) Logger.LogDebug("{} matches as EyeExpression! Set its scaling to {}", jsonProperty.Name, jsonProperty.Value.ToString());
-                    this.eyeScales.Add(eyeExpression, jsonProperty.Value.GetSingle());
+                    LogDebugMatchEyeExpression(jsonProperty.Name, jsonProperty.Value);
+                    _eyeScales.Add(eyeExpression, jsonProperty.Value.GetSingle());
                 }
-                UnifiedExpressions unifiedExpression;
-                if (Enum.TryParse<UnifiedExpressions>(jsonProperty.Name, out unifiedExpression))
+                if (Enum.TryParse<UnifiedExpressions>(jsonProperty.Name, out var unifiedExpression))
                 {
-                    if (Logger != null) Logger.LogDebug("{} matches as UnifiedExpression! Set its scaling to {}", jsonProperty.Name, jsonProperty.Value.ToString());
-                    this.unifiedScales.Add(unifiedExpression, jsonProperty.Value.GetSingle());
+                    LogDebugMatchUnifiedExpression(jsonProperty.Name, jsonProperty.Value);
+                    _unifiedScales.Add(unifiedExpression, jsonProperty.Value.GetSingle());
                 }
             }
             return true;
         }
         catch (Exception ex)
         {
-            if (Logger != null) Logger.LogError(ex.ToString());
+            LogError(ex);
             return false;
         }
     }
 
     private bool CreateConfigFile()
     {
-        if (Logger != null) Logger.LogInformation("Generating blendshape scaling config file...");
+        LogCreateConfigFile();
 
-        StringBuilder sb = new StringBuilder();
-        NumberFormatInfo nfi = new System.Globalization.NumberFormatInfo();
-        nfi.NumberDecimalSeparator = ".";
-
-        sb.Append("{\n\t\"scales\": {\n");
-
-        foreach (EyeExpressions ee in this.GetUsedEyeExpressionShapes())
+        using StringWriter writer = new()
         {
-            sb.Append("\t\t\"")
-                .Append(ee.ToString())
-                .Append("\": 1.00,\n");
+            NewLine = "\r\n  ",
+        };
+        writer.WriteLine('{');
+        writer.NewLine = "\r\n    ";
+        writer.WriteLine("\"scales\": {");
+
+        foreach (var ee in GetUsedEyeExpressionShapes())
+        {
+            writer.Write('"');
+            writer.Write(ee);
+            writer.Write('"');
+            writer.WriteLine(": 1.00,");
         }
 
-        foreach (UnifiedExpressions ue in this.GetUsedUnifiedExpressionShapes())
+        foreach (var ue in GetUsedUnifiedExpressionShapes())
         {
-            sb.Append("\t\t\"")
-                .Append(ue.ToString())
-                .Append("\": 1.00,\n");
+            writer.Write('"');
+            writer.Write(ue);
+            writer.Write('"');
+            writer.WriteLine(": 1.00,");
         }
 
-        if (sb.Length > 0)
+        if (writer.GetStringBuilder() is { Length: > 0 } sb)
         {
             // not empty; we have to remove the last ','
-            sb.Length = sb.Length - 2;
-            sb.Append('\n');
+            sb.Length -= writer.NewLine.Length + 1;
         }
 
-        sb.Append("\t}\n}");
+        writer.NewLine = "\r\n  ";
+        writer.WriteLine();
+
+        writer.NewLine = "\r\n";
+        writer.WriteLine('}');
+        writer.WriteLine('}');
 
         try
         {
-            this.fileSystem.File.WriteAllText(this.configPath, sb.ToString());
+            fileSystem.File.WriteAllText(configPath, writer.ToString());
             return true;
         }
-        catch (Exception ex) {
-            if (Logger != null) Logger.LogError(ex.ToString());
+        catch (Exception ex)
+        {
+            LogError(ex);
             return false;
         }
     }
 
     public float EyeExpressionShapeScale(float val, EyeExpressions type)
     {
-        if (this.eyeScales == null)
+        if (_eyeScales == null)
         {
             bool loaded = LoadConfigFile();
-            if (!loaded || this.eyeScales == null) return val; // couldn't load; expect a '*1' multiplier
+            if (!loaded || _eyeScales == null)
+                return val; // couldn't load; expect a '*1' multiplier
         }
 
-        float scale;
-        if (!this.eyeScales.TryGetValue(type, out scale)) scale = 1.0f; // property not set
+        if (!_eyeScales.TryGetValue(type, out float scale))
+            scale = 1.0f; // property not set
         return val * scale;
     }
 
     public float UnifiedExpressionShapeScale(float val, UnifiedExpressions type)
     {
-        if (this.unifiedScales == null)
+        if (_unifiedScales == null)
         {
             bool loaded = LoadConfigFile();
-            if (!loaded || this.unifiedScales == null) return val; // couldn't load; expect a '*1' multiplier
+            if (!loaded || _unifiedScales == null)
+                return val; // couldn't load; expect a '*1' multiplier
         }
 
-        float scale;
-        if (!this.unifiedScales.TryGetValue(type, out scale)) scale = 1.0f; // property not set
+        if (!_unifiedScales.TryGetValue(type, out float scale))
+            scale = 1.0f; // property not set
+
         return val * scale;
     }
 
-    public List<EyeExpressions> GetUsedEyeExpressionShapes()
-    {
-        return new List<EyeExpressions>()
-        {
-            EyeExpressions.EyeXGazeRight,
-            EyeExpressions.EyeYGazeRight,
-            EyeExpressions.EyeXGazeLeft,
-            EyeExpressions.EyeYGazeLeft,
-            EyeExpressions.EyeOpennessRight,
-            EyeExpressions.EyeOpennessLeft
-        };
-    }
+    public List<EyeExpressions> GetUsedEyeExpressionShapes() =>
+    [
+        EyeExpressions.EyeXGazeRight,
+        EyeExpressions.EyeYGazeRight,
+        EyeExpressions.EyeXGazeLeft,
+        EyeExpressions.EyeYGazeLeft,
+        EyeExpressions.EyeOpennessRight,
+        EyeExpressions.EyeOpennessLeft
+    ];
 
-    public List<UnifiedExpressions> GetUsedUnifiedExpressionShapes()
-    {
-        return new List<UnifiedExpressions>()
-        {
-            UnifiedExpressions.BrowInnerUpLeft,
-            UnifiedExpressions.BrowInnerUpRight,
-            UnifiedExpressions.BrowOuterUpLeft,
-            UnifiedExpressions.BrowOuterUpRight,
-            UnifiedExpressions.BrowLowererLeft,
-            UnifiedExpressions.BrowPinchLeft,
-            UnifiedExpressions.BrowLowererRight,
-            UnifiedExpressions.BrowPinchRight,
-            UnifiedExpressions.EyeSquintLeft,
-            UnifiedExpressions.EyeSquintRight,
-            UnifiedExpressions.EyeWideLeft,
-            UnifiedExpressions.EyeWideRight,
-            UnifiedExpressions.JawOpen,
-            UnifiedExpressions.JawLeft,
-            UnifiedExpressions.JawRight,
-            UnifiedExpressions.JawForward,
-            UnifiedExpressions.MouthClosed,
-            UnifiedExpressions.CheekPuffLeft,
-            UnifiedExpressions.CheekPuffRight,
-            UnifiedExpressions.CheekSquintLeft,
-            UnifiedExpressions.CheekSquintRight,
-            UnifiedExpressions.NoseSneerLeft,
-            UnifiedExpressions.NoseSneerRight,
-            UnifiedExpressions.MouthUpperUpLeft,
-            UnifiedExpressions.MouthUpperUpRight,
-            UnifiedExpressions.MouthLowerDownLeft,
-            UnifiedExpressions.MouthLowerDownRight,
-            UnifiedExpressions.MouthFrownLeft,
-            UnifiedExpressions.MouthFrownRight,
-            UnifiedExpressions.MouthDimpleLeft,
-            UnifiedExpressions.MouthDimpleRight,
-            UnifiedExpressions.MouthUpperLeft,
-            UnifiedExpressions.MouthLowerLeft,
-            UnifiedExpressions.MouthUpperRight,
-            UnifiedExpressions.MouthLowerRight,
-            UnifiedExpressions.MouthPressLeft,
-            UnifiedExpressions.MouthPressRight,
-            UnifiedExpressions.MouthRaiserLower,
-            UnifiedExpressions.MouthRaiserUpper,
-            UnifiedExpressions.MouthCornerPullLeft,
-            UnifiedExpressions.MouthCornerSlantLeft,
-            UnifiedExpressions.MouthCornerPullRight,
-            UnifiedExpressions.MouthCornerSlantRight,
-            UnifiedExpressions.MouthStretchLeft,
-            UnifiedExpressions.MouthStretchRight,
-            UnifiedExpressions.LipFunnelUpperLeft,
-            UnifiedExpressions.LipFunnelUpperRight,
-            UnifiedExpressions.LipFunnelLowerLeft,
-            UnifiedExpressions.LipFunnelLowerRight,
-            UnifiedExpressions.LipPuckerUpperLeft,
-            UnifiedExpressions.LipPuckerUpperRight,
-            UnifiedExpressions.LipPuckerLowerLeft,
-            UnifiedExpressions.LipPuckerLowerRight,
-            UnifiedExpressions.LipSuckUpperLeft,
-            UnifiedExpressions.LipSuckUpperRight,
-            UnifiedExpressions.LipSuckLowerLeft,
-            UnifiedExpressions.LipSuckLowerRight,
-            UnifiedExpressions.TongueOut
-        };
-    }
+    public List<UnifiedExpressions> GetUsedUnifiedExpressionShapes() =>
+    [
+        UnifiedExpressions.BrowInnerUpLeft,
+        UnifiedExpressions.BrowInnerUpRight,
+        UnifiedExpressions.BrowOuterUpLeft,
+        UnifiedExpressions.BrowOuterUpRight,
+        UnifiedExpressions.BrowLowererLeft,
+        UnifiedExpressions.BrowPinchLeft,
+        UnifiedExpressions.BrowLowererRight,
+        UnifiedExpressions.BrowPinchRight,
+        UnifiedExpressions.EyeSquintLeft,
+        UnifiedExpressions.EyeSquintRight,
+        UnifiedExpressions.EyeWideLeft,
+        UnifiedExpressions.EyeWideRight,
+        UnifiedExpressions.JawOpen,
+        UnifiedExpressions.JawLeft,
+        UnifiedExpressions.JawRight,
+        UnifiedExpressions.JawForward,
+        UnifiedExpressions.MouthClosed,
+        UnifiedExpressions.CheekPuffLeft,
+        UnifiedExpressions.CheekPuffRight,
+        UnifiedExpressions.CheekSquintLeft,
+        UnifiedExpressions.CheekSquintRight,
+        UnifiedExpressions.NoseSneerLeft,
+        UnifiedExpressions.NoseSneerRight,
+        UnifiedExpressions.MouthUpperUpLeft,
+        UnifiedExpressions.MouthUpperUpRight,
+        UnifiedExpressions.MouthLowerDownLeft,
+        UnifiedExpressions.MouthLowerDownRight,
+        UnifiedExpressions.MouthFrownLeft,
+        UnifiedExpressions.MouthFrownRight,
+        UnifiedExpressions.MouthDimpleLeft,
+        UnifiedExpressions.MouthDimpleRight,
+        UnifiedExpressions.MouthUpperLeft,
+        UnifiedExpressions.MouthLowerLeft,
+        UnifiedExpressions.MouthUpperRight,
+        UnifiedExpressions.MouthLowerRight,
+        UnifiedExpressions.MouthPressLeft,
+        UnifiedExpressions.MouthPressRight,
+        UnifiedExpressions.MouthRaiserLower,
+        UnifiedExpressions.MouthRaiserUpper,
+        UnifiedExpressions.MouthCornerPullLeft,
+        UnifiedExpressions.MouthCornerSlantLeft,
+        UnifiedExpressions.MouthCornerPullRight,
+        UnifiedExpressions.MouthCornerSlantRight,
+        UnifiedExpressions.MouthStretchLeft,
+        UnifiedExpressions.MouthStretchRight,
+        UnifiedExpressions.LipFunnelUpperLeft,
+        UnifiedExpressions.LipFunnelUpperRight,
+        UnifiedExpressions.LipFunnelLowerLeft,
+        UnifiedExpressions.LipFunnelLowerRight,
+        UnifiedExpressions.LipPuckerUpperLeft,
+        UnifiedExpressions.LipPuckerUpperRight,
+        UnifiedExpressions.LipPuckerLowerLeft,
+        UnifiedExpressions.LipPuckerLowerRight,
+        UnifiedExpressions.LipSuckUpperLeft,
+        UnifiedExpressions.LipSuckUpperRight,
+        UnifiedExpressions.LipSuckLowerLeft,
+        UnifiedExpressions.LipSuckLowerRight,
+        UnifiedExpressions.TongueOut
+    ];
+
+
+    [LoggerMessage(LogLevel.Debug, "Trying to parse {property}...")]
+    private partial void LogDebugTryToParse(string property);
+
+    [LoggerMessage(LogLevel.Debug, "{property} matches as EyeExpression! Set its scaling to {value}")]
+    private partial void LogDebugMatchEyeExpression(string property, JsonElement value);
+
+    [LoggerMessage(LogLevel.Debug, "{property} matches as UnifiedExpression! Set its scaling to {value}")]
+    private partial void LogDebugMatchUnifiedExpression(string property, JsonElement value);
+
+    [LoggerMessage(LogLevel.Error, "FileBlendshapeScaler.LoadConfigFile: Unexpected exceptions")]
+    private partial void LogError(Exception exception);
+
+
+    [LoggerMessage(LogLevel.Information, "Generating blendshape scaling config file...")]
+    private partial void LogCreateConfigFile();
 }

@@ -2,5 +2,5 @@
 
 public interface IFileSystem
 {
-    public IFile File { get; }
+    IFile File { get; }
 }

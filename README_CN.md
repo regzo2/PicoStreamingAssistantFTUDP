@@ -45,22 +45,22 @@
 
 您可以在`artifacts\Pico4SAFTXextTrackingModule.dll`中找到该模块
 
-### 使用 Visual Studio 2022 编译
+### 使用 Visual Studio 2022 / 2026 编译
 
-- 安装 [Visual Studio 2022](https://visualstudio.microsoft.com/vs/) 并选择 .Net 桌面开发 负载
+- 安装 [Visual Studio 2022 / 2026](https://visualstudio.microsoft.com/vs/) 并选择 .Net 桌面开发 负载
 - 使用 `git clone https://github.com/regzo2/PicoStreamingAssistantFTUDP.git --recurse-submodules` 命令克隆本仓库
-- 使用 Visual Studio 2022 打开位于 `PicoStreamingAssistantFTUDP` 文件夹下的解决方案 `PicoStreamingAssistantFTUDP.sln`
+- 使用 Visual Studio 2022 / 2026 打开位于 `PicoStreamingAssistantFTUDP` 文件夹下的解决方案 `PicoStreamingAssistantFTUDP.slnx`
 - 编译此解决方案会自动编译`VRCFaceTracking.Core`和模块
 
-您会在这找到编译完成的模块： `PicoStreamingAssistantFTUDP\PicoStreamingAssistantFTUDP\bin\x64\Debug\net7.0\Pico4SAFTExtTrackingModule.dll`.
+您会在这找到编译完成的模块： `PicoStreamingAssistantFTUDP\PicoStreamingAssistantFTUDP\bin\x64\Debug\net10.0\Pico4SAFTExtTrackingModule.dll`.
 
 ### 使用 Dotnet SDK 编译
-- 安装 [Dotnet 7 SDK](https://dotnet.microsoft.com/download/dotnet/7.0)
+- 安装 [Dotnet 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
 - 使用 `git clone https://github.com/regzo2/PicoStreamingAssistantFTUDP.git --recurse-submodules` 命令克隆本仓库
-- 运行命令 `dotnet build PicoStreamingAssistantFTUDP`
+- 在 `PicoStreamingAssistantFTUDP` 文件夹下运行命令 `dotnet publish --graph --artifacts-path artifacts --configuration Release`
 - 此命令会自动编译`VRCFaceTracking.Core`和模块
 
-您会在这找到编译完成的模块： `PicoStreamingAssistantFTUDP\PicoStreamingAssistantFTUDP\bin\x64\Debug\net7.0\Pico4SAFTExtTrackingModule.dll`.
+您会在这找到编译完成的模块： `PicoStreamingAssistantFTUDP\artifacts\publish\Pico4SAFTExtTrackingModule\release\Pico4SAFTExtTrackingModule.dll`.
 
 ## 运行测试
 
@@ -73,22 +73,24 @@
 
 您可以在 `PicoStreamingAssistantFTUDP\PicoStreamingAxistantFTTests\TestResults\dotnet-test-results.xml` 中找到摘要
 
-### 使用 Visual Studio 2022 运行测试
+### 使用 Visual Studio 2022 / 2026 运行测试
 
 > [!NOTE]
-> 请确保您有安装 .Net 7 SDK，否则测试可能无法正常工作
+> 请确保您有安装 .Net 10 SDK，否则测试可能无法正常工作
 
 - 在 Visual Studio 的顶部菜单栏上，单击“测试”，然后单击“运行所有测试”。
 
 ### 使用 Dotnet SDK 测试
 
 > [!NOTE]
-> 请确保您有安装 .Net 7 SDK，否则测试可能无法正常工作
+> 请确保您有安装 .Net 10 SDK，否则测试可能无法正常工作
 
 - 运行命令 `dotnet test PicoStreamingAssistantFTUDP`
 
 ## 贡献
 - [Ben](https://github.com/benaclejames/) 的 VRCFaceTracking!
 - [TofuLemon](https://github.com/ULemon/) 帮助测试、故障排除和提供关键信息，从而开发该模块！
-- [rogermiranda1000](https://github.com/rogermiranda1000) 更新到最新版的协议
+- [miranda1000](https://github.com/miranda1000) 更新到最新版的协议
 - [lonelyicer](https://github.com/lonelyicer) 最近的贡献。
+- [FuviiPeshu](https://github.com/FuviiPeshu) 用于SA进程检测修复。
+- [frg2089](https://github.com/frg2089) （2023）使用高性能但内存不安全的代码重构，（2026）使用高性能且内存安全的代码重构

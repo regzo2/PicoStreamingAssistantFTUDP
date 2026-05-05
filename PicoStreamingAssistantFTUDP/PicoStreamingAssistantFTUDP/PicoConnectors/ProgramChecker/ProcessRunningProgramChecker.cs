@@ -1,44 +1,25 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Diagnostics;
 
 namespace Pico4SAFTExtTrackingModule.PicoConnectors.ProgramChecker;
 
 public sealed class ProcessRunningProgramChecker : IProgramChecker
 {
-    /**
-     * Checks if the specified program is running on the machine
-     * @param program "Streaming Assistant, Business Streaming or PICO Connect
-     * @return If the process related to the program is running, or not
-     **/
+    /// <summary>
+    /// Checks if the specified program is running on the machine
+    /// </summary>
+    /// <param name="program">Streaming Assistant, Business Streaming or PICO Connect</param>
+    /// <returns>If the process related to the program is running, or not</returns>
+    /// <exception cref="ArgumentException"></exception>
     public bool Check(PicoPrograms program)
     {
-        string processName;
-        switch (program)
+        string processName = program switch
         {
-            case PicoPrograms.StreamingAssistant:
-                processName = "Streaming Assistant";
-                break;
-
-            case PicoPrograms.BusinessStreamingV1:
-                processName = "Business StreamingUW";
-                break;
-
-            case PicoPrograms.BusinessStreaming:
-                processName = "Business Streaming";
-                break;
-
-            case PicoPrograms.PicoConnect:
-                processName = "PICO Connect";
-                break;
-
-            default:
-                throw new ArgumentException("Unexpected program to check: " + program.ToString());
-        }
-
+            PicoPrograms.StreamingAssistant => "Streaming Assistant",
+            PicoPrograms.BusinessStreamingV1 => "Business StreamingUW",
+            PicoPrograms.BusinessStreaming => "Business Streaming",
+            PicoPrograms.PicoConnect => "PICO Connect",
+            _ => throw new ArgumentException($"Unexpected program to check: {program}"),
+        };
         return Process.GetProcessesByName(processName).Length > 0;
     }
 }

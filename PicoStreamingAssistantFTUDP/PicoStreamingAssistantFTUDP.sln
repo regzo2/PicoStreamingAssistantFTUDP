@@ -3,30 +3,41 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.5.33103.201
 MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VRCFaceTracking.SDK", "..\VRCFaceTracking\VRCFaceTracking.SDK\VRCFaceTracking.SDK.csproj", "{85A15663-22FC-6FA2-C31D-44787EDAC852}"
+EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VRCFaceTracking.Core", "..\VRCFaceTracking\VRCFaceTracking.Core\VRCFaceTracking.Core.csproj", "{EE52D02D-BC46-41F2-97DE-CDC09017D7A9}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Pico4SAFTExtTrackingModule", "PicoStreamingAssistantFTUDP\Pico4SAFTExtTrackingModule.csproj", "{C5FDC7A7-FBA2-46F2-968C-FF81A57C1ED8}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PicoStreamingAssistantFTTests", "PicoStreamingAssistantFTTests\PicoStreamingAssistantFTTests.csproj", "{C4623909-EA05-45B7-B949-31ECB715EA2F}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{089100B1-113F-4E66-888A-E83F3999EAFD}"
+	ProjectSection(SolutionItems) = preProject
+		Directory.Build.props = Directory.Build.props
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
-		Debug|x64 = Debug|x64
-		Release|x64 = Release|x64
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{EE52D02D-BC46-41F2-97DE-CDC09017D7A9}.Debug|x64.ActiveCfg = Debug|x64
-		{EE52D02D-BC46-41F2-97DE-CDC09017D7A9}.Debug|x64.Build.0 = Debug|x64
-		{EE52D02D-BC46-41F2-97DE-CDC09017D7A9}.Release|x64.ActiveCfg = Release|x64
-		{EE52D02D-BC46-41F2-97DE-CDC09017D7A9}.Release|x64.Build.0 = Release|x64
-		{C5FDC7A7-FBA2-46F2-968C-FF81A57C1ED8}.Debug|x64.ActiveCfg = Debug|x64
-		{C5FDC7A7-FBA2-46F2-968C-FF81A57C1ED8}.Debug|x64.Build.0 = Debug|x64
-		{C5FDC7A7-FBA2-46F2-968C-FF81A57C1ED8}.Release|x64.ActiveCfg = Release|x64
-		{C5FDC7A7-FBA2-46F2-968C-FF81A57C1ED8}.Release|x64.Build.0 = Release|x64
-		{C4623909-EA05-45B7-B949-31ECB715EA2F}.Debug|x64.ActiveCfg = Debug|x64
-		{C4623909-EA05-45B7-B949-31ECB715EA2F}.Debug|x64.Build.0 = Debug|x64
-		{C4623909-EA05-45B7-B949-31ECB715EA2F}.Release|x64.ActiveCfg = Release|x64
-		{C4623909-EA05-45B7-B949-31ECB715EA2F}.Release|x64.Build.0 = Release|x64
+		{85A15663-22FC-6FA2-C31D-44787EDAC852}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{85A15663-22FC-6FA2-C31D-44787EDAC852}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{85A15663-22FC-6FA2-C31D-44787EDAC852}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{85A15663-22FC-6FA2-C31D-44787EDAC852}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EE52D02D-BC46-41F2-97DE-CDC09017D7A9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EE52D02D-BC46-41F2-97DE-CDC09017D7A9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EE52D02D-BC46-41F2-97DE-CDC09017D7A9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EE52D02D-BC46-41F2-97DE-CDC09017D7A9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C5FDC7A7-FBA2-46F2-968C-FF81A57C1ED8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C5FDC7A7-FBA2-46F2-968C-FF81A57C1ED8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C5FDC7A7-FBA2-46F2-968C-FF81A57C1ED8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C5FDC7A7-FBA2-46F2-968C-FF81A57C1ED8}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C4623909-EA05-45B7-B949-31ECB715EA2F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C4623909-EA05-45B7-B949-31ECB715EA2F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C4623909-EA05-45B7-B949-31ECB715EA2F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C4623909-EA05-45B7-B949-31ECB715EA2F}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -2,7 +2,9 @@
 
 public interface IFile
 {
-    public string ReadAllText(string path);
-    public bool Exists(string path);
-    public void WriteAllText(string path, string? contents);
+    string ReadAllText(string path);
+    bool Exists(string path);
+    void WriteAllText(string path, string? contents);
+
+    TextWriter CreateText(string path);
 }

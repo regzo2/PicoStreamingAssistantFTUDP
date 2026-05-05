@@ -52,11 +52,10 @@ public class ItLegacyConnectorShould
             Assert.IsFalse(startThread.IsAlive, "Expected connector to finish after data was sent; got still running");
             startThread = null; // thread finished
 
-            unsafe
             {
                 // now the socket is connected; try to get something
-                SpinWait.SpinUntil(() => uut.GetBlendShapes() != null, 5_000);
-                Assert.IsTrue(uut.GetBlendShapes() != null, "Expected data to return; got null");
+                SpinWait.SpinUntil(() => !uut.GetBlendShapes().IsEmpty, 5_000);
+                Assert.IsTrue(!uut.GetBlendShapes().IsEmpty, "Expected data to return; got null");
 
                 // now close the server; a timeout should raise closing the connection
                 socketMock.Dispose();
@@ -67,7 +66,7 @@ public class ItLegacyConnectorShould
                 Func<bool> socketIsClosed = () => {
                     try
                     {
-                        return uut.GetBlendShapes() == null;
+                        return uut.GetBlendShapes().IsEmpty;
                     }
                     catch (SocketException ex) when (ex.ErrorCode is 10060)
                     {

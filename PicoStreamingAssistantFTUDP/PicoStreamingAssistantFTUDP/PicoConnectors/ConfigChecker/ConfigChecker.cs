@@ -1,32 +1,16 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
+
 using Pico4SAFTExtTrackingModule.PicoConnectors.ConfigChecker.PicoConnect;
 
 namespace Pico4SAFTExtTrackingModule.PicoConnectors.ConfigChecker;
 
-public sealed class ConfigChecker : IConfigChecker
+public sealed class ConfigChecker(ILogger logger) : IConfigChecker
 {
-    public readonly PicoConnectConfigChecker picoConnectConfigChecker;
+    public readonly PicoConnectConfigChecker picoConnectConfigChecker = new(logger);
 
-    public ConfigChecker(ILogger logger)
+    public int GetTransferProtocolNumber(PicoPrograms program) => program switch
     {
-        this.picoConnectConfigChecker = new PicoConnectConfigChecker(logger);
-    }
-
-    public int GetTransferProtocolNumber(PicoPrograms program)
-    {
-        switch (program)
-        {
-            case PicoPrograms.PicoConnect:
-            case PicoPrograms.BusinessStreaming:
-                return this.picoConnectConfigChecker.GetTransferProtocolNumber(program);
-
-            default:
-                throw new NotImplementedException();
-        }
-    }
+        PicoPrograms.PicoConnect or PicoPrograms.BusinessStreaming => picoConnectConfigChecker.GetTransferProtocolNumber(program),
+        _ => throw new NotImplementedException(),
+    };
 }

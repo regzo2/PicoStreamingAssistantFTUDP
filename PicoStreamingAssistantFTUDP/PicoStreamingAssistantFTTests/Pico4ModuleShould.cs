@@ -1,7 +1,10 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+
 using Moq;
+
 using Pico4SAFTExtTrackingModule.BlendshapeScaler;
 using Pico4SAFTExtTrackingModule.PicoConnectors;
+
 using VRCFaceTracking;
 using VRCFaceTracking.Core.Library;
 using VRCFaceTracking.Core.Params.Data;
@@ -32,7 +35,7 @@ public class Pico4ModuleShould
     }
 
     [TestMethod]
-    public unsafe void ApplyScalingToShapes()
+    public void ApplyScalingToShapes()
     {
         int numberOfEyeParamsSet = 6,
             numberOfFaceParamsSet = 58;
@@ -42,7 +45,7 @@ public class Pico4ModuleShould
         Pico4SAFTExtTrackingModule uut = new Pico4SAFTExtTrackingModule(pxrFTInfoMock, scalerMock.Object);
         // simulate the `Setup` has been called
         uut.Status = ModuleState.Active;
-        uut.trackingState = (true, true);
+        uut.TrackingState = (true, true);
 
         // act
         uut.Update();
@@ -54,14 +57,14 @@ public class Pico4ModuleShould
 
     [Ignore] // too hard to fix with the module; will update the README
     [TestMethod]
-    public unsafe void IgnoreFacetrackingBlendshapesWhenVisemesDataAvailable()
+    public void IgnoreFacetrackingBlendshapesWhenVisemesDataAvailable()
     {
         IPicoConnectorMock pxrFTInfoMock = new IPicoConnectorMock();
         Mock<IBlendshapeScaler> scalerMock = GetScalerMock();
         Pico4SAFTExtTrackingModule uut = new Pico4SAFTExtTrackingModule(pxrFTInfoMock, scalerMock.Object);
         // simulate the `Setup` has been called
         uut.Status = ModuleState.Active;
-        uut.trackingState = (true, true);
+        uut.TrackingState = (true, true);
 
         // act
         // 1. no sound
@@ -71,11 +74,11 @@ public class Pico4ModuleShould
         uut.Update();
 
         // assert
-        fixed (UnifiedExpressionShape* unifiedShape = UnifiedTracking.Data.Shapes)
-        fixed (UnifiedSingleEyeData* pLeft = &UnifiedTracking.Data.Eye.Left)
         {
+            Span<UnifiedExpressionShape> unifiedShape = UnifiedTracking.Data.Shapes;
+            ref UnifiedSingleEyeData pLeft = ref UnifiedTracking.Data.Eye.Left;
             Assert.AreEqual(1.0f, unifiedShape[(int)UnifiedExpressions.JawOpen].Weight);
-            Assert.AreEqual(1.0f, pLeft->Openness); // we set blink to 0 so that means it's open
+            Assert.AreEqual(1.0f, pLeft.Openness); // we set blink to 0 so that means it's open
         }
 
         // act
@@ -86,11 +89,11 @@ public class Pico4ModuleShould
         uut.Update();
 
         // assert
-        fixed (UnifiedExpressionShape* unifiedShape = UnifiedTracking.Data.Shapes)
-        fixed (UnifiedSingleEyeData* pLeft = &UnifiedTracking.Data.Eye.Left)
         {
+            Span<UnifiedExpressionShape> unifiedShape = UnifiedTracking.Data.Shapes;
+            ref UnifiedSingleEyeData pLeft = ref UnifiedTracking.Data.Eye.Left;
             Assert.AreEqual(1.0f, unifiedShape[(int)UnifiedExpressions.JawOpen].Weight);
-            Assert.AreEqual(1.0f, pLeft->Openness); // we set blink to 0 so that means it's open
+            Assert.AreEqual(1.0f, pLeft.Openness); // we set blink to 0 so that means it's open
         }
 
         // act
@@ -101,11 +104,11 @@ public class Pico4ModuleShould
         uut.Update();
 
         // assert
-        fixed (UnifiedExpressionShape* unifiedShape = UnifiedTracking.Data.Shapes)
-        fixed (UnifiedSingleEyeData* pLeft = &UnifiedTracking.Data.Eye.Left)
         {
+            Span<UnifiedExpressionShape> unifiedShape = UnifiedTracking.Data.Shapes;
+            ref UnifiedSingleEyeData pLeft = ref UnifiedTracking.Data.Eye.Left;
             Assert.AreEqual(1.0f, unifiedShape[(int)UnifiedExpressions.JawOpen].Weight);
-            Assert.AreEqual(0.0f, pLeft->Openness); // we set blink to 1 so that means it's closed
+            Assert.AreEqual(0.0f, pLeft.Openness); // we set blink to 1 so that means it's closed
         }
 
         // act
@@ -116,11 +119,11 @@ public class Pico4ModuleShould
         uut.Update();
 
         // assert
-        fixed (UnifiedExpressionShape* unifiedShape = UnifiedTracking.Data.Shapes)
-        fixed (UnifiedSingleEyeData* pLeft = &UnifiedTracking.Data.Eye.Left)
         {
+            Span<UnifiedExpressionShape> unifiedShape = UnifiedTracking.Data.Shapes;
+            ref UnifiedSingleEyeData pLeft = ref UnifiedTracking.Data.Eye.Left;
             Assert.AreEqual(1.0f, unifiedShape[(int)UnifiedExpressions.JawOpen].Weight);
-            Assert.AreEqual(0.0f, pLeft->Openness); // we set blink to 1 so that means it's closed
+            Assert.AreEqual(0.0f, pLeft.Openness); // we set blink to 1 so that means it's closed
         }
 
         // act
@@ -131,11 +134,11 @@ public class Pico4ModuleShould
         uut.Update();
 
         // assert
-        fixed (UnifiedExpressionShape* unifiedShape = UnifiedTracking.Data.Shapes)
-        fixed (UnifiedSingleEyeData* pLeft = &UnifiedTracking.Data.Eye.Left)
         {
+            Span<UnifiedExpressionShape> unifiedShape = UnifiedTracking.Data.Shapes;
+            ref UnifiedSingleEyeData pLeft = ref UnifiedTracking.Data.Eye.Left;
             Assert.AreEqual(0.2f, unifiedShape[(int)UnifiedExpressions.JawOpen].Weight);
-            Assert.AreEqual(0.0f, pLeft->Openness); // we set blink to 1 so that means it's closed
+            Assert.AreEqual(0.0f, pLeft.Openness); // we set blink to 1 so that means it's closed
         }
     }
 
@@ -150,12 +153,9 @@ public class Pico4ModuleShould
             this.getBlendShapesReturn = new PxrFTInfo();
         }
 
-        public unsafe void setParam(BlendShapeIndex shape, float value)
+        public void setParam(BlendShapeIndex shape, float value)
         {
-            fixed (float* blendShapeWeights = this.getBlendShapesReturn.blendShapeWeight)
-            {
-                blendShapeWeights[(int)shape] = value;
-            }
+            this.getBlendShapesReturn.blendShapeWeight[(int)shape] = value;
         }
 
         public bool Connect()
@@ -163,10 +163,9 @@ public class Pico4ModuleShould
             throw new NotImplementedException();
         }
 
-        public unsafe float* GetBlendShapes()
+        public ReadOnlySpan<float> GetBlendShapes()
         {
-            fixed (float* blendShapeWeights = this.getBlendShapesReturn.blendShapeWeight)
-                return blendShapeWeights;
+            return getBlendShapesReturn.blendShapeWeight;
         }
 
         public string GetProcessName()

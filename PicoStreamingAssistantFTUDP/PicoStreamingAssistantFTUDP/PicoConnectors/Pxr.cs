@@ -1,4 +1,4 @@
-﻿using System;
+﻿using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
 namespace Pico4SAFTExtTrackingModule.PicoConnectors;
@@ -6,8 +6,8 @@ namespace Pico4SAFTExtTrackingModule.PicoConnectors;
 public static class Pxr
 {
     public const int BLEND_SHAPE_NUMS = 72;
-
 }
+
 public enum BlendShapeIndex
 {
     EyeLookDown_L = 0,
@@ -87,12 +87,12 @@ public enum BlendShapeIndex
 [StructLayout(LayoutKind.Sequential, Pack = 1)]
 public struct TrackingDataHeader
 {
-    public Byte start_code1;
-    public Byte start_code2;
-    public Byte tracking_type;
-    public Byte sub_type;
-    public Byte multi_packet;
-    public Byte current_packet_index;
+    public byte start_code1;
+    public byte start_code2;
+    public byte tracking_type;
+    public byte sub_type;
+    public byte multi_packet;
+    public byte current_packet_index;
     public ushort version;
     public ulong timestamp;
 };
@@ -101,9 +101,27 @@ public struct TrackingDataHeader
 public struct PxrFTInfo
 {
     public long timestamp;
-    public unsafe fixed float blendShapeWeight[Pxr.BLEND_SHAPE_NUMS];
-    public unsafe fixed float videoInputValid[10];
+    public BlendShapeWeight blendShapeWeight;
+    public FloatBuffer videoInputValid;
     public float laughingProb;
-    public unsafe fixed float emotionProb[10];
-    public unsafe fixed float reserved[128];
+    public FloatBuffer emotionProb;
+    public ReservedFloatBuffer reserved;
 };
+
+[InlineArray(Pxr.BLEND_SHAPE_NUMS)]
+public struct BlendShapeWeight
+{
+    private float _element0;
+}
+
+[InlineArray(10)]
+public struct FloatBuffer
+{
+    private float _element0;
+}
+
+[InlineArray(128)]
+public struct ReservedFloatBuffer
+{
+    private float _element0;
+}

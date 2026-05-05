@@ -1,4 +1,4 @@
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using Pico4SAFTExtTrackingModule.PicoConnectors.ConfigChecker;
@@ -22,7 +22,7 @@ public class ConnectorFactoryShould
                         .Returns(0);
 
         // act
-        IPicoConnector? got = ConnectorFactory.build(logger.Object, programCheckerMock.Object, configCheckerMock.Object);
+        IPicoConnector? got = ConnectorFactory.Build(logger.Object, programCheckerMock.Object, configCheckerMock.Object);
 
         // assert
         Assert.IsNull(got);
@@ -43,7 +43,7 @@ public class ConnectorFactoryShould
                         .Returns(0);
 
         // act
-        IPicoConnector? got = ConnectorFactory.build(logger.Object, programCheckerMock.Object, configCheckerMock.Object);
+        IPicoConnector? got = ConnectorFactory.Build(logger.Object, programCheckerMock.Object, configCheckerMock.Object);
 
         // assert
         Assert.AreEqual(typeof(PicoConnectConnector), got?.GetType());
@@ -64,7 +64,7 @@ public class ConnectorFactoryShould
                         .Returns(2); // old transfer protocol
 
         // act
-        IPicoConnector? got = ConnectorFactory.build(logger.Object, programCheckerMock.Object, configCheckerMock.Object);
+        IPicoConnector? got = ConnectorFactory.Build(logger.Object, programCheckerMock.Object, configCheckerMock.Object);
 
         // assert
         Assert.AreEqual(typeof(LegacyConnector), got?.GetType());
@@ -86,7 +86,7 @@ public class ConnectorFactoryShould
                         .Returns(0);
 
         // act
-        IPicoConnector? got = ConnectorFactory.build(logger.Object, programCheckerMock.Object, configCheckerMock.Object);
+        IPicoConnector? got = ConnectorFactory.Build(logger.Object, programCheckerMock.Object, configCheckerMock.Object);
 
         // assert
         Assert.AreEqual(typeof(LegacyConnector), got?.GetType());
@@ -108,7 +108,7 @@ public class ConnectorFactoryShould
                         .Returns(0);
 
         // act
-        IPicoConnector? got = ConnectorFactory.build(logger.Object, programCheckerMock.Object, configCheckerMock.Object);
+        IPicoConnector? got = ConnectorFactory.Build(logger.Object, programCheckerMock.Object, configCheckerMock.Object);
 
         // assert
         Assert.AreEqual(typeof(LegacyConnector), got?.GetType());
@@ -130,7 +130,7 @@ public class ConnectorFactoryShould
                         .Returns(0);
 
         // act
-        IPicoConnector? got = ConnectorFactory.build(logger.Object, programCheckerMock.Object, configCheckerMock.Object);
+        IPicoConnector? got = ConnectorFactory.Build(logger.Object, programCheckerMock.Object, configCheckerMock.Object);
 
         // assert
         Assert.AreEqual(typeof(PicoConnectConnector), got?.GetType());
@@ -151,7 +151,7 @@ public class ConnectorFactoryShould
                         .Returns(2); // old transfer protocol
 
         // act
-        IPicoConnector? got = ConnectorFactory.build(logger.Object, programCheckerMock.Object, configCheckerMock.Object);
+        IPicoConnector? got = ConnectorFactory.Build(logger.Object, programCheckerMock.Object, configCheckerMock.Object);
 
         // assert
         Assert.AreEqual(typeof(LegacyConnector), got?.GetType());

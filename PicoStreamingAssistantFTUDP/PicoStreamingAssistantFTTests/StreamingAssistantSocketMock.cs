@@ -12,13 +12,13 @@ public sealed class StreamingAssistantSocketMock
     private static readonly string IP = "127.0.0.1";
     private static readonly int SA_PORT = 29765;
 
-    private static readonly unsafe int pxrHeaderSize = sizeof(TrackingDataHeader);
-    private static readonly unsafe int pxrFtInfoSize = sizeof(PxrFTInfo);
+    private static readonly int pxrHeaderSize = Unsafe.SizeOf<TrackingDataHeader>();
+    private static readonly int pxrFtInfoSize = Unsafe.SizeOf<PxrFTInfo>();
     private static readonly int PacketSize = pxrHeaderSize + pxrFtInfoSize;
 
     private bool _disposed;
     private UdpClient? serverSocket;
-    private byte[] sending;
+    private byte[] sending = default!;
 
     public StreamingAssistantSocketMock()
     {

@@ -1,49 +1,45 @@
 ﻿using System.Text;
+
 using Pico4SAFTExtTrackingModule.PicoConnectors;
-using System.Runtime.CompilerServices;
 
 namespace Pico4SAFTExtTrackingModule.PacketLogger;
 
 public sealed class PicoDataLoggerFactory
 {
-    protected sealed class PicoDataExtractor : DataExtractor<PxrFTInfo>
+    public static PacketLogger<PxrFTInfo> Build(string path)
+        => new(path, new PicoDataExtractor());
+}
+
+file sealed class PicoDataExtractor : IDataExtractor<PxrFTInfo>
+{
+    public void Clone(in PxrFTInfo obj, ref PxrFTInfo ret) => ret = obj; // ValueType always clone it
+
+    public string GetCSVHeader(char delimiter)
     {
-        public unsafe void Clone(PxrFTInfo *obj, PxrFTInfo* ret)
+        StringBuilder sb = new();
+
+        foreach (var shape in Enum.GetValues<BlendShapeIndex>())
         {
-            Unsafe.CopyBlock(ret, obj, (uint)sizeof(PxrFTInfo));
+            sb.Append(Enum.GetName(shape));
+            sb.Append(delimiter);
         }
 
-        public string GetCSVHeader(char delimiter)
-        {
-            StringBuilder sb = new StringBuilder();
-
-            foreach (BlendShapeIndex shape in Enum.GetValues(typeof(BlendShapeIndex)))
-            {
-                sb.Append(Enum.GetName(typeof(BlendShapeIndex), shape));
-                sb.Append(delimiter);
-            }
-
-            sb.Length--; // remove the last delimiter
-            return sb.ToString();
-        }
-
-        public unsafe string ToCSV(PxrFTInfo *obj, char delimiter)
-        {
-            StringBuilder sb = new StringBuilder();
-
-            for (int n = 0; n < Pxr.BLEND_SHAPE_NUMS; n++)
-            {
-                sb.Append(obj->blendShapeWeight[n]);
-                sb.Append(delimiter);
-            }
-
-            sb.Length--; // remove the last delimiter
-            return sb.ToString();
-        }
+        sb.Length--; // remove the last delimiter
+        return sb.ToString();
     }
 
-    public static unsafe PacketLogger<PxrFTInfo> build(string path)
+    public string ToCSV(in PxrFTInfo obj, char delimiter)
     {
-        return new PacketLogger<PxrFTInfo>(path, new PicoDataExtractor());
+        ReadOnlySpan<float> span = obj.blendShapeWeight;
+        StringBuilder sb = new();
+
+        for (int n = 0; n < span.Length; n++)
+        {
+            sb.Append(span[n]);
+            sb.Append(delimiter);
+        }
+
+        sb.Length--; // remove the last delimiter
+        return sb.ToString();
     }
 }

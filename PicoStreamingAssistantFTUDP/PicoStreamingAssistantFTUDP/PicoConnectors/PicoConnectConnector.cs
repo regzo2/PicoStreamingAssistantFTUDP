@@ -1,30 +1,22 @@
 ﻿using Microsoft.Extensions.Logging;
-using System.Diagnostics;
 
 namespace Pico4SAFTExtTrackingModule.PicoConnectors;
 
-/**
- * Connector class for PICO Connect
- **/
-public sealed class PicoConnectConnector : IPicoConnector
+/// <summary>
+/// Connector class for PICO Connect
+/// </summary>
+/// <param name="logger"></param>
+public sealed partial class PicoConnectConnector(ILogger logger) : IPicoConnector
 {
-    private ILogger Logger;
-
-    public PicoConnectConnector(ILogger Logger)
-    {
-        this.Logger = Logger;
-    }
-
     public bool Connect()
     {
-        Logger.LogInformation("PICO Connect module is still under development.");
-        Logger.LogInformation("You may want to set `mergetype=2` in the PICO Connect config to use the old protocol. For more information check https://docs.vrcft.io/docs/hardware/pico4pe#pico-connect-beta-setup");
+        LogTodo();
         return false;
     }
 
-    public unsafe float* GetBlendShapes()
+    public ReadOnlySpan<float> GetBlendShapes()
     {
-        return null;
+        return [];
     }
 
     public string GetProcessName()
@@ -34,6 +26,12 @@ public sealed class PicoConnectConnector : IPicoConnector
 
     void IPicoConnector.Teardown()
     {
-        
     }
+
+
+    [LoggerMessage(LogLevel.Information, """
+        PICO Connect module is still under development.
+        You may want to set `mergetype=2` in the PICO Connect config to use the old protocol. For more information check https://docs.vrcft.io/docs/hardware/pico4pe#pico-connect-beta-setup
+        """)]
+    private partial void LogTodo();
 }

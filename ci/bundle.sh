@@ -23,7 +23,12 @@ fi
 cp "$base_path/metadata.json" "$tmp_dir/module.json"
 
 # zip (no compression + no directories)
-docker run -it --rm --name vrcft-pico-module-bundle -v "$base_path":"/app" -v "$tmp_dir":"/metadata" joshkeegan/zip:latest zip -0 -j /app/artifacts/Pico4ProModule.zip "/app/artifacts/Pico4SAFTExtTrackingModule.dll" "/metadata/module.json"
+docker run -it --rm \
+    --name vrcft-pico-module-bundle \
+    -v "$base_path":"/app" \
+    -v "$tmp_dir":"/metadata" \
+    joshkeegan/zip:latest \
+        zip -0 -j /app/artifacts/Pico4ProModule.zip "/app/artifacts/Pico4SAFTExtTrackingModule.dll" "/metadata/module.json"
 
 # clear tmp dir
 rm -rf "$tmp_dir"

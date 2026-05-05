@@ -1,14 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿namespace Pico4SAFTExtTrackingModule.PacketLogger;
 
-namespace Pico4SAFTExtTrackingModule.PacketLogger;
-
-public interface DataExtractor<T>
+public interface IDataExtractor<T> where T : struct
 {
-    unsafe void Clone(T *obj, T *ret);
-    unsafe string ToCSV(T *obj, char delimiter);
+    void Clone(in T obj, ref T ret);
+    string ToCSV(in T obj, char delimiter);
     string GetCSVHeader(char delimiter);
 }

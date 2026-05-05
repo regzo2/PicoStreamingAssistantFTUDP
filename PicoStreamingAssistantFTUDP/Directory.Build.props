@@ -1,0 +1,9 @@
+<Project>
+  <Import Project="../VRCFaceTracking/Directory.Build.props" />
+
+  <PropertyGroup>
+    <ContinuousIntegrationBuild Condition="'$(TF_BUILD)' == 'true'">true</ContinuousIntegrationBuild>
+    <ContinuousIntegrationBuild Condition="'$(GITHUB_ACTIONS)' == 'true'">true</ContinuousIntegrationBuild>
+    <ContinuousIntegrationBuild Condition="'$(DOCKER_BUILD)' == 'true'">true</ContinuousIntegrationBuild>
+  </PropertyGroup>
+</Project>

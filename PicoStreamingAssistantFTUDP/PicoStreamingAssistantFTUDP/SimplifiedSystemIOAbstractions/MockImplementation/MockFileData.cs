@@ -1,10 +1,12 @@
-﻿namespace System.IO.Abstractions.TestingHelpers;
+﻿using System.Text;
 
-public sealed class MockFileData
+namespace System.IO.Abstractions.TestingHelpers;
+
+public sealed class MockFileData(StringBuilder builder)
 {
-    public string? Contents { get; private set; }
+    public StringBuilder Contents { get; private set; } = builder;
 
-    public MockFileData(string? contents) {
-        this.Contents = contents;
+    public MockFileData(string? contents) : this(new StringBuilder(contents))
+    {
     }
 }

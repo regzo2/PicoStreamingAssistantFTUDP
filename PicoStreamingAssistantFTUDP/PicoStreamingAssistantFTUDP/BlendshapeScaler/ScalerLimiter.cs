@@ -1,51 +1,29 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using VRCFaceTracking.Core.Params.Expressions;
+﻿using VRCFaceTracking.Core.Params.Expressions;
 
 namespace Pico4SAFTExtTrackingModule.BlendshapeScaler;
 
-/**
- * As VRC will go crazy if the param goes above 1.0f or below -1.0f,
- * this class will truncate the output.
- **/
-public class ScalerLimiter : IBlendshapeScaler
+/// <summary>
+/// As VRC will go crazy if the param goes above 1.0f or below -1.0f,
+/// this class will truncate the output.
+/// </summary>
+/// <param name="limiting"></param>
+public sealed class ScalerLimiter(IBlendshapeScaler limiting) : IBlendshapeScaler
 {
     public static readonly float UPPER_LIMIT = 0.99f;
     public static readonly float LOWER_LIMIT = -0.99f;
 
-    private IBlendshapeScaler limiting;
-    public ScalerLimiter(IBlendshapeScaler limiting)
-    {
-        this.limiting = limiting;
-    }
-
     public static float Filter(float val)
-    {
-        if (val > UPPER_LIMIT) val = UPPER_LIMIT;
-        else if (val < LOWER_LIMIT) val = LOWER_LIMIT;
-        return val;
-    }
+        => float.Clamp(val, LOWER_LIMIT, UPPER_LIMIT);
 
     public float EyeExpressionShapeScale(float val, EyeExpressions type)
-    {
-        return Filter(this.limiting.EyeExpressionShapeScale(val, type));
-    }
+        => Filter(limiting.EyeExpressionShapeScale(val, type));
 
     public float UnifiedExpressionShapeScale(float val, UnifiedExpressions type)
-    {
-        return Filter(this.limiting.UnifiedExpressionShapeScale(val, type));
-    }
+        => Filter(limiting.UnifiedExpressionShapeScale(val, type));
 
     public List<EyeExpressions> GetUsedEyeExpressionShapes()
-    {
-        return this.limiting.GetUsedEyeExpressionShapes();
-    }
+        => limiting.GetUsedEyeExpressionShapes();
 
     public List<UnifiedExpressions> GetUsedUnifiedExpressionShapes()
-    {
-        return this.limiting.GetUsedUnifiedExpressionShapes();
-    }
+        => limiting.GetUsedUnifiedExpressionShapes();
 }

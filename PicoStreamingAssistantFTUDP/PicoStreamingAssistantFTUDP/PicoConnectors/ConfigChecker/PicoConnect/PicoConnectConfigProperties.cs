@@ -1,11 +1,15 @@
-﻿namespace Pico4SAFTExtTrackingModule.PicoConnectors.ConfigChecker.PicoConnect;
+﻿using System.Text.Json.Serialization;
 
-public class Config
+namespace Pico4SAFTExtTrackingModule.PicoConnectors.ConfigChecker.PicoConnect;
+
+public sealed class Config
 {
-    public Lab lab { get; set; }
+    [JsonPropertyName("lab")]
+    public Lab? Lab { get; set; }
 }
 
-public class Lab
+public sealed class Lab
 {
-    public int faceTrackingTransferProtocol { get; set; }
+    [JsonPropertyName("faceTrackingTransferProtocol")]
+    public int FaceTrackingTransferProtocol { get; set; }
 }

@@ -8,4 +8,8 @@ fi
 script_path=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 base_path=$(dirname "$script_path")
 
-docker run -it --rm --name vrcft-pico-module-tests -v "$base_path":"/app" mcr.microsoft.com/dotnet/sdk:7.0 bash /app/ci/test-images/tests.sh
+docker run -it --rm \
+    --name vrcft-pico-module-tests \
+    -v "$base_path":"/app" \
+    mcr.microsoft.com/dotnet/sdk:10.0 \
+        bash /app/ci/test-images/tests.sh
