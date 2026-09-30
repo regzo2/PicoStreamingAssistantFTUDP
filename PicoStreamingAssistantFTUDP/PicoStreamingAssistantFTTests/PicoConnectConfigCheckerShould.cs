@@ -15,7 +15,7 @@ public class PicoConnectConfigCheckerShould
     {
         Mock<ILogger> logger = new Mock<ILogger>();
         logger.Setup(m => m.Log(
-                    It.Is<LogLevel>(logLevel => logLevel == LogLevel.Error || logLevel == LogLevel.Critical),
+                    It.Is<LogLevel>(logLevel => logLevel >= LogLevel.Warning),
                     It.IsAny<EventId>(),
                     It.IsAny<It.IsAnyType>(),
                     It.IsAny<Exception>(),

@@ -1,4 +1,4 @@
-﻿using System.Net;
+using System.Net;
 using System.Net.Sockets;
 
 using Microsoft.Extensions.Logging;
@@ -11,6 +11,7 @@ using VRCFaceTracking.Core.Params.Expressions;
 using Pico4SAFTExtTrackingModule.PicoConnectors.ProgramChecker;
 using Pico4SAFTExtTrackingModule.PicoConnectors.ConfigChecker;
 using Pico4SAFTExtTrackingModule.BlendshapeScaler;
+using Pico4SAFTExtTrackingModule.Diagnostics;
 
 namespace Pico4SAFTExtTrackingModule;
 
@@ -19,6 +20,15 @@ public sealed class Pico4SAFTExtTrackingModule : ExtTrackingModule, IDisposable
     private bool disposedValue;
     private IPicoConnector? connector;
     private IBlendshapeScaler? scaler;
+    private readonly Func<IPicoConnector?> connectorFactory;
+    private readonly Func<DateTime> utcNow;
+    private DateTime nextConnectorAttempt;
+    private DateTime nextUpdateAttempt;
+    private readonly PicoDiagnostics diagnostics;
+    private ModuleState? lastStatus;
+    private string? lastStreamer;
+    private TimeSpan? updateFailureStarted;
+    private long updateFailures;
     public (bool, bool) trackingState = (false, false);
 
     private const bool FILE_LOG = false;
@@ -27,59 +37,164 @@ public sealed class Pico4SAFTExtTrackingModule : ExtTrackingModule, IDisposable
 
     public override (bool SupportsEye, bool SupportsExpression) Supported { get; } = (true, true);
 
-    public Pico4SAFTExtTrackingModule()
-    {
-        this.connector = null;
-        this.scaler = null;
-        this.logger = null;
-        this.disposedValue = false;
-    }
+    public Pico4SAFTExtTrackingModule() : this(null, null, null, null) { }
 
     public Pico4SAFTExtTrackingModule(IPicoConnector connector, IBlendshapeScaler scaler)
+        : this(connector, scaler, null, null) { }
+
+    internal Pico4SAFTExtTrackingModule(IPicoConnector? connector, IBlendshapeScaler? scaler,
+        Func<IPicoConnector?>? connectorFactory, Func<DateTime>? utcNow)
     {
         this.connector = connector;
         this.scaler = scaler;
+        this.utcNow = utcNow ?? (() => DateTime.UtcNow);
+        this.diagnostics = new PicoDiagnostics(() => Logger, utcNow);
+        this.connectorFactory = connectorFactory ?? (() => ConnectorFactory.build(diagnostics.Logger,
+            new ProcessRunningProgramChecker(), new ConfigChecker(diagnostics.Logger)));
         this.logger = null;
         this.disposedValue = false;
     }
 
     private bool StreamerValidity()
     {
-        this.connector = ConnectorFactory.build(Logger, new ProcessRunningProgramChecker(), new ConfigChecker(Logger));
+        this.connector = this.connectorFactory();
         if (this.connector == null)
         {
-            Logger.LogError("\"Streaming Assistant\", \"Streaming Assistant\" or \"PICO Connect\" process was not found. Please run the Streaming Assistant or PICO Connect before VRCFaceTracking.");
+            diagnostics.Report(LogLevel.Information, "WaitingForStreamer", "", () =>
+                "Streaming Assistant, Business Streaming, and PICO Connect were not found; probing again in 5000ms.");
             return false;
         }
 
-        Logger.LogInformation("Using {}.", this.connector.GetProcessName());
+        string streamer = this.connector.GetProcessName();
+        if (streamer != lastStreamer)
+        {
+            diagnostics.Report(LogLevel.Information, "StreamerSelected", streamer, () =>
+                $"Selected {streamer}; connector={this.connector.GetType().Name}.");
+            lastStreamer = streamer;
+        }
         return true;
+    }
+
+    private bool TryConnect()
+    {
+        if (this.utcNow() < this.nextConnectorAttempt)
+        {
+            Thread.Sleep(100);
+            return false;
+        }
+
+        Exception? connectionError = null;
+        bool streamerFound = false;
+        diagnostics.BeginConnectionAttempt();
+        try
+        {
+            if ((streamerFound = StreamerValidity()) && this.connector!.Connect())
+            {
+                // A successful bind must not delay recovery from a later receive failure.
+                this.nextConnectorAttempt = default;
+                diagnostics.Flush("ConnectionFailure");
+                diagnostics.Flush("WaitingForStreamer");
+                diagnostics.Report(LogLevel.Information, "ConnectorReady", "", () =>
+                    "Connector ready; waiting for a valid face sample. Binding alone does not establish data reception.");
+                return true;
+            }
+        }
+        catch (Exception ex)
+        {
+            connectionError = ex;
+        }
+
+        if (connectionError != null)
+            diagnostics.Report(LogLevel.Warning, "ConnectionFailure", "exception", () =>
+                "Service discovery or connection threw; connector closed; retry in 5000ms.", connectionError);
+        else if (streamerFound)
+            diagnostics.Report(LogLevel.Warning, "ConnectionFailure", "not-ready", () =>
+                "Connector not ready; retry service discovery/connection in 5000ms. See preceding configuration/bind details.");
+        ResetConnector();
+        this.nextConnectorAttempt = this.utcNow().AddSeconds(5);
+        Thread.Sleep(100);
+        return false;
+    }
+
+    private void ResetConnector()
+    {
+        var previousConnector = this.connector;
+        this.connector = null;
+        try
+        {
+            previousConnector?.Teardown();
+        }
+        catch (Exception teardownError)
+        {
+            diagnostics.Report(LogLevel.Warning, "ConnectorCleanupFailed", "", () =>
+                "Could not close the PICO connector; recovery will continue.", teardownError);
+        }
+    }
+
+    private unsafe bool TryGetBlendShapes(out float* shapes)
+    {
+        try
+        {
+            shapes = this.connector!.GetBlendShapes();
+            return true;
+        }
+        catch (Exception ex)
+        {
+            shapes = null;
+            BackOffUpdate(ex, "receive");
+            return false;
+        }
+    }
+
+    private void BackOffUpdate(Exception ex, string stage, string operation = "read")
+    {
+        bool rebuild = stage == "receive" && ex is SocketException or ObjectDisposedException;
+        if (!rebuild) this.nextUpdateAttempt = this.utcNow().AddSeconds(1);
+        updateFailureStarted ??= diagnostics.Elapsed;
+        updateFailures++;
+        diagnostics.PauseReception();
+        diagnostics.Report(stage == "processing" ? LogLevel.Error : LogLevel.Warning,
+            "UpdateFailure/" + stage, operation, () =>
+                $"stage={stage}; operation={operation}; socketError={(ex is SocketException socket ? socket.ErrorCode.ToString() : "none")}; " +
+                $"{(rebuild ? "rebuild local UDP listener" : "retain connector")}; update backoff=1000ms.", ex);
+        if (rebuild)
+        {
+            // Record the original failure before cleanup, which may itself fail.
+            ResetConnector();
+            this.nextUpdateAttempt = this.utcNow().AddSeconds(1);
+        }
     }
 
     public override (bool eyeSuccess, bool expressionSuccess) Initialize(bool eyeAvailable, bool expressionAvailable)
     {
+        try { return InitializeTracking(eyeAvailable, expressionAvailable); }
+        catch (Exception ex)
+        {
+            diagnostics.Report(LogLevel.Error, "InitializationFailed", "", () =>
+                "PICO module initialization failed; the host will skip this module.", ex);
+            throw;
+        }
+    }
+
+    private (bool eyeSuccess, bool expressionSuccess) InitializeTracking(bool eyeAvailable, bool expressionAvailable)
+    {
         trackingState = (eyeAvailable, expressionAvailable);
-        if (!StreamerValidity() || (!eyeAvailable && !expressionAvailable))
+        if (!eyeAvailable && !expressionAvailable)
         {
-            Logger.LogWarning("No data is usable, skipping initialization.");
+            diagnostics.Logger.LogWarning("Neither eye nor expression tracking is available; skipping initialization.");
             return (false, false);
         }
 
-        Logger.LogInformation("Initializing {} data stream.", this.connector.GetProcessName());
-        /*while (!this.disposedValue && !*/this.connector.Connect()/*) Thread.Sleep(4_000)*/;
+        diagnostics.Logger.LogInformation("PICO module loaded; version={Version}; eye={Eye}; expression={Expression}; " +
+            "repeatWindow=30s; CSV={Csv}. Streaming service will be detected in the background.",
+            typeof(Pico4SAFTExtTrackingModule).Assembly.GetName().Version, eyeAvailable, expressionAvailable, FILE_LOG);
 
-        if (this.disposedValue)
-        {
-            Logger.LogWarning("Module failed to establish a connection.");
-            return (false, false);
-        }
-
-        this.scaler = new FileBlendshapeScalerFactory().build(Logger);
+        this.scaler ??= new FileBlendshapeScalerFactory().build(diagnostics.Logger);
 
         if (FILE_LOG)
         {
             this.logger = PicoDataLoggerFactory.build(LOGGER_PATH);
-            Logger.LogInformation("Using {} path for PICO logs.", LOGGER_PATH);
+            diagnostics.Logger.LogInformation("Using {Path} for PICO CSV logs.", LOGGER_PATH);
         }
 
         ModuleInformation.Name = "Pico 4 Pro / Enterprise";
@@ -88,9 +203,9 @@ public sealed class Pico4SAFTExtTrackingModule : ExtTrackingModule, IDisposable
         ModuleInformation.StaticImages = stream is not null ? new List<Stream> { stream } : ModuleInformation.StaticImages;
 
         if (!trackingState.Item1)
-            Logger.LogInformation("Eye tracking already in use, disabling eye data."); 
+            diagnostics.Logger.LogInformation("Eye tracking already in use, disabling eye data.");
         if (!trackingState.Item2) 
-            Logger.LogInformation("Expression Tracking already in use, disabling expression data.");
+            diagnostics.Logger.LogInformation("Expression tracking already in use, disabling expression data.");
 
         return trackingState;
     }
@@ -105,7 +220,7 @@ public sealed class Pico4SAFTExtTrackingModule : ExtTrackingModule, IDisposable
         left->Gaze.y = this.scaler!.EyeExpressionShapeScale(pxrShape[(int)BlendShapeIndex.EyeLookUp_L] - pxrShape[(int)BlendShapeIndex.EyeLookDown_L], EyeExpressions.EyeYGazeLeft);
 
         right->Gaze.x = this.scaler!.EyeExpressionShapeScale(pxrShape[(int)BlendShapeIndex.EyeLookOut_R] - pxrShape[(int)BlendShapeIndex.EyeLookIn_R], EyeExpressions.EyeXGazeRight);
-        right->Gaze.y = this.scaler!.EyeExpressionShapeScale(pxrShape[(int)BlendShapeIndex.EyeLookUp_R] - pxrShape[(int)BlendShapeIndex.EyeLookDown_R], EyeExpressions.EyeXGazeLeft);
+        right->Gaze.y = this.scaler!.EyeExpressionShapeScale(pxrShape[(int)BlendShapeIndex.EyeLookUp_R] - pxrShape[(int)BlendShapeIndex.EyeLookDown_R], EyeExpressions.EyeYGazeRight);
     }
 
     private unsafe void UpdateEyeExpression(float* pxrShape, UnifiedExpressionShape* unifiedShape)
@@ -194,47 +309,83 @@ public sealed class Pico4SAFTExtTrackingModule : ExtTrackingModule, IDisposable
 
     public override void Update()
     {
+        diagnostics.Tick();
+        if (lastStatus != Status)
+        {
+            diagnostics.Report(LogLevel.Information, "ModuleState", Status.ToString(), () =>
+                $"Module state changed to {Status}; {(Status == ModuleState.Active ? "updates enabled" : "reception deliberately paused")}.");
+            lastStatus = Status;
+        }
         if (Status != ModuleState.Active)
         {
+            diagnostics.PauseReception();
             Thread.Sleep(100);
             return;
         }
 
-        try
+        if (this.utcNow() < this.nextUpdateAttempt)
         {
-            unsafe
+            // The host calls Update continuously, so returning immediately would spin a CPU core.
+            Thread.Sleep(100);
+            return;
+        }
+
+        if (this.connector == null && !TryConnect())
+            return;
+
+        diagnostics.ResumeReception();
+
+        unsafe
+        {
+            if (!TryGetBlendShapes(out float* pxrShape) || pxrShape == null)
+                return;
+
+            string operation = "processing";
+            try
             {
-                float* pxrShape = this.connector.GetBlendShapes();
-                if (pxrShape != null)
+                if (this.logger != null)
                 {
-                    if (this.logger != null)
+                    operation = "csv";
+                    // legacy; PacketLogger#UpdateValue needs a PxrFTInfo; but we don't want to send that outside from the PicoConnector
+                    PxrFTInfo data = PicoDataLoggerHelper.FillPxrFTInfo(pxrShape);
+                    this.logger.UpdateValue(&data);
+                }
+
+                fixed (UnifiedExpressionShape* unifiedShape = UnifiedTracking.Data.Shapes)
+                {
+                    if (trackingState.Item1)
                     {
-                        // legacy; PacketLogger#UpdateValue needs a PxrFTInfo; but we don't want to send that outside from the PicoConnector
-                        PxrFTInfo data = PicoDataLoggerHelper.FillPxrFTInfo(pxrShape);
-                        this.logger.UpdateValue(&data);
+                        fixed (UnifiedSingleEyeData* pLeft = &UnifiedTracking.Data.Eye.Left)
+                        fixed (UnifiedSingleEyeData* pRight = &UnifiedTracking.Data.Eye.Right)
+                        {
+                            operation = "eye-gaze/openness";
+                            UpdateEye(pxrShape, pLeft, pRight);
+                            operation = "eye-expressions";
+                            UpdateEyeExpression(pxrShape, unifiedShape);
+                        }
                     }
 
-                    fixed (UnifiedExpressionShape* unifiedShape = UnifiedTracking.Data.Shapes)
+                    if (trackingState.Item2)
                     {
-                        if (trackingState.Item1)
-                        {
-                            fixed (UnifiedSingleEyeData* pLeft = &UnifiedTracking.Data.Eye.Left)
-                            fixed (UnifiedSingleEyeData* pRight = &UnifiedTracking.Data.Eye.Right)
-                            {
-                                UpdateEye(pxrShape, pLeft, pRight);
-                                UpdateEyeExpression(pxrShape, unifiedShape);
-                            }
-                        }
-
-                        if (trackingState.Item2) 
-                            UpdateExpression(pxrShape, unifiedShape);
+                        operation = "mouth-expressions";
+                        UpdateExpression(pxrShape, unifiedShape);
                     }
                 }
+                if (updateFailureStarted is { } failedAt)
+                {
+                    diagnostics.Flush("UpdateFailure/");
+                    diagnostics.Report(LogLevel.Information, "ProcessingResumed", "", () =>
+                        $"Tracking processing resumed after {(diagnostics.Elapsed - failedAt).TotalSeconds:F3}s; " +
+                        $"update failures={updateFailures}.");
+                    updateFailureStarted = null;
+                    updateFailures = 0;
+                }
             }
-        }
-        catch (Exception ex)
-        {
-            Logger.LogWarning("Unexpected exceptions: {exception}", ex);
+            catch (Exception ex)
+            {
+                // Mapping and optional logging failures do not invalidate the UDP listener.
+                BackOffUpdate(ex, "processing", operation);
+            }
         }
     }
 
@@ -246,16 +397,18 @@ public sealed class Pico4SAFTExtTrackingModule : ExtTrackingModule, IDisposable
         {
             if (disposing)
             {
-                if (this.connector != null)
+                try
                 {
-                    this.connector.Teardown();
-                    this.connector = null;
-                }
-
-                if (this.logger != null)
-                {
-                    this.logger.Dispose();
+                    diagnostics.PauseReception();
+                    diagnostics.Report(LogLevel.Information, "ModuleShutdown", "", () =>
+                        $"Shutting down PICO module; unresolved update failures={updateFailures}.");
+                    ResetConnector();
+                    this.logger?.Dispose();
                     this.logger = null;
+                }
+                finally
+                {
+                    diagnostics.Flush(forget: true);
                 }
             }
 

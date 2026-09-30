@@ -18,7 +18,7 @@ public sealed class PacketLogger<T> : IDisposable
     private DataExtractor<T> dataExtractor;
     private bool waiting;
     private T current;
-    private object waitingCurrentLock = new object();
+    private readonly object waitingCurrentLock = new object();
 
     public PacketLogger(string filePath, DataExtractor<T> dataExtractor)
     {
@@ -35,14 +35,14 @@ public sealed class PacketLogger<T> : IDisposable
 
     public unsafe void UpdateValue(T* obj)
     {
-        if (!this.IsWaiting()) return; // already got something
-
-        fixed (T* ret = &this.current) {
-            dataExtractor.Clone(obj, ret);
-        }
         lock (this.waitingCurrentLock)
         {
-            this.waiting = false; // got the new data
+            if (!this.threadEnabled || !this.waiting) return;
+            fixed (T* ret = &this.current) {
+                dataExtractor.Clone(obj, ret);
+            }
+            this.waiting = false;
+            Monitor.Pulse(this.waitingCurrentLock);
         }
     }
 
@@ -52,16 +52,18 @@ public sealed class PacketLogger<T> : IDisposable
         {
             writer.WriteLine(this.dataExtractor.GetCSVHeader(CSV_DELIMITER)); // TODO add timestamp
 
-            while (this.threadEnabled)
+            while (true)
             {
-                if (this.IsWaiting()) continue; // no data; try again later
-
-                fixed (T *curr = &this.current) {
-                    writer.WriteLine(this.dataExtractor.ToCSV(curr, CSV_DELIMITER));
-                }
                 lock (this.waitingCurrentLock)
                 {
-                    this.waiting = true; // request a new data
+                    while (this.threadEnabled && this.waiting)
+                        Monitor.Wait(this.waitingCurrentLock);
+                    if (!this.threadEnabled) return;
+
+                    fixed (T *curr = &this.current) {
+                        writer.WriteLine(this.dataExtractor.ToCSV(curr, CSV_DELIMITER));
+                    }
+                    this.waiting = true;
                 }
             }
         }
@@ -69,7 +71,11 @@ public sealed class PacketLogger<T> : IDisposable
 
     public void Dispose()
     {
-        this.threadEnabled = false;
+        lock (this.waitingCurrentLock)
+        {
+            this.threadEnabled = false;
+            Monitor.Pulse(this.waitingCurrentLock);
+        }
         this.thread.Join();
     }
 

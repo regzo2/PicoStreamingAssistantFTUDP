@@ -1,0 +1,4 @@
+root = true
+
+[*.{cs,csproj,sln,md,json}]
+charset = utf-8

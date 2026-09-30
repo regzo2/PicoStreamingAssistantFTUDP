@@ -84,6 +84,17 @@ public enum BlendShapeIndex
     sil = 71
 };
 
+// Header layout assumed by LegacyConnector for legacy UDP datagrams: 16 bytes, Pack = 1.
+// Byte offsets: start_code1=0, start_code2=1, tracking_type=2, sub_type=3,
+// multi_packet=4, current_packet_index=5, version=6..7, timestamp=8..15.
+// After checking the datagram length, the parser only validates tracking_type == 2;
+// all other header fields, including version and timestamp, are ignored.
+// The parser assumes each datagram contains a complete timestamp/weight prefix for one sample.
+// multi_packet/current_packet_index are not interpreted, and no application-level
+// reassembly across datagrams is implemented. Fragments shorter than 312 bytes are
+// skipped; fragments satisfying the length/type checks can be mistaken for whole samples.
+// PICO Connect setup (configuration guidance, not a binary-layout specification):
+// https://docs.vrcft.io/docs/hardware/vr/pico/pico4pe
 [StructLayout(LayoutKind.Sequential, Pack = 1)]
 public struct TrackingDataHeader
 {
@@ -97,6 +108,17 @@ public struct TrackingDataHeader
     public ulong timestamp;
 };
 
+// Legacy payload layout used by this parser: 892 bytes with Pack = 1.
+// Offsets relative to the payload, after the 16-byte TrackingDataHeader:
+//   timestamp: 0..7 (8 bytes); blendShapeWeight[72]: 8..295 (288 bytes);
+//   videoInputValid[10]: 296..335 (40 bytes); laughingProb: 336..339 (4 bytes);
+//   emotionProb[10]: 340..379 (40 bytes); reserved[128]: 380..891 (512 bytes).
+// MemoryCopy performs no byte-order conversion; values are interpreted in host byte order
+// (little-endian on Windows x64).
+// LegacyConnector copies only the first 296 bytes. Tracking and CSV output use only
+// blendShapeWeight; the received timestamp is not used for ordering or freshness checks.
+// Its 8-byte slot must still be present so the weights start at the expected offset.
+// The remaining 596 bytes are neither copied from the datagram nor consumed.
 [StructLayout(LayoutKind.Sequential, Pack = 1)]
 public struct PxrFTInfo
 {

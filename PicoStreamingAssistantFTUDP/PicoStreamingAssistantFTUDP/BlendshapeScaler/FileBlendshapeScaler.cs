@@ -44,25 +44,24 @@ public class FileBlendshapeScaler : IBlendshapeScaler
             JsonElement scales = JsonDocument.Parse(stringifiedJson).RootElement.GetProperty("scales");
             foreach (var jsonProperty in scales.EnumerateObject())
             {
-                if (Logger != null) Logger.LogDebug("Trying to parse {}...", jsonProperty.Name);
                 EyeExpressions eyeExpression;
                 if (Enum.TryParse<EyeExpressions>(jsonProperty.Name, out eyeExpression))
                 {
-                    if (Logger != null) Logger.LogDebug("{} matches as EyeExpression! Set its scaling to {}", jsonProperty.Name, jsonProperty.Value.ToString());
                     this.eyeScales.Add(eyeExpression, jsonProperty.Value.GetSingle());
                 }
                 UnifiedExpressions unifiedExpression;
                 if (Enum.TryParse<UnifiedExpressions>(jsonProperty.Name, out unifiedExpression))
                 {
-                    if (Logger != null) Logger.LogDebug("{} matches as UnifiedExpression! Set its scaling to {}", jsonProperty.Name, jsonProperty.Value.ToString());
                     this.unifiedScales.Add(unifiedExpression, jsonProperty.Value.GetSingle());
                 }
             }
+            Logger?.LogInformation("Loaded PICO scaling config {ConfigPath}; eye scales={EyeCount}; expression scales={ExpressionCount}.",
+                configPath, eyeScales.Count, unifiedScales.Count);
             return true;
         }
         catch (Exception ex)
         {
-            if (Logger != null) Logger.LogError(ex.ToString());
+            Logger?.LogError(ex, "Could not fully load PICO scaling config {ConfigPath}; already loaded entries are retained; missing scales use 1.0.", configPath);
             return false;
         }
     }
@@ -106,7 +105,7 @@ public class FileBlendshapeScaler : IBlendshapeScaler
             return true;
         }
         catch (Exception ex) {
-            if (Logger != null) Logger.LogError(ex.ToString());
+            Logger?.LogError(ex, "Could not create PICO scaling config {ConfigPath}; missing scales use 1.0.", configPath);
             return false;
         }
     }

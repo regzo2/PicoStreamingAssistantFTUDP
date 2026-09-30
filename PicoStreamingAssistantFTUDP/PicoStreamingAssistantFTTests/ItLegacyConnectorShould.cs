@@ -11,6 +11,37 @@ namespace Pico4SAFTExtTrackingModule.PicoConnectors;
 public class ItLegacyConnectorShould
 {
 
+    [TestMethod, Timeout(5_000)]
+    public unsafe void UseTheNewestValidQueuedFacePacket()
+    {
+        var logger = new Mock<ILogger>();
+        var connector = new LegacyConnector(logger.Object, PicoPrograms.PicoConnect);
+        using var sender = new UdpClient();
+        try
+        {
+            Assert.IsTrue(connector.Connect());
+            var target = new IPEndPoint(IPAddress.Loopback, 29765);
+            for (var sample = 1; sample <= 5; sample++)
+            {
+                var packet = new byte[sizeof(TrackingDataHeader) + sizeof(long) + Pxr.BLEND_SHAPE_NUMS * sizeof(float)];
+                packet[2] = 2;
+                BitConverter.GetBytes((float)sample).CopyTo(packet, sizeof(TrackingDataHeader) + sizeof(long));
+                sender.Send(packet, packet.Length, target);
+            }
+
+            sender.Send(new byte[3], 3, target);
+            Thread.Sleep(50);
+
+            var shapes = connector.GetBlendShapes();
+            Assert.IsTrue(shapes != null);
+            Assert.AreEqual(5f, shapes[0]);
+        }
+        finally
+        {
+            connector.Teardown();
+        }
+    }
+
     [TestMethod(), Timeout(30_000)]
     [Ignore()] // revisit test
     public void CloseANeverStablishedConnection()

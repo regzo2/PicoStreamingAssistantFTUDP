@@ -20,15 +20,20 @@ public sealed class PicoConnectConfigChecker : IConfigChecker
     private static Config GetConfig(IFileSystem fileSystem, ILogger? logger = null)
     {
         string configLocation = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "PICO Connect\\settings.json");
-        logger.LogInformation("Expecting PICO Connect settings file at '" + configLocation + "'");
+        logger?.LogDebug("Reading PICO Connect settings from {ConfigPath}.", configLocation);
         try
         {
             string configContents = fileSystem.File.ReadAllText(configLocation);
             return JsonSerializer.Deserialize<Config>(configContents);
         }
+        catch (JsonException ex)
+        {
+            logger?.LogError(ex, "PICO Connect settings JSON is invalid: {ConfigPath}.", configLocation);
+            return null;
+        }
         catch (Exception ex)
         {
-            logger?.LogError("Pico Connect Config deserialize failed: " + ex.ToString());
+            logger?.LogWarning(ex, "Could not read PICO Connect settings: {ConfigPath}.", configLocation);
             return null;
         }
     }
@@ -37,9 +42,10 @@ public sealed class PicoConnectConfigChecker : IConfigChecker
     {
         if (program != PicoPrograms.PicoConnect) throw new ArgumentException("PicoConnectConfigChecker class only checks for PICO Connect config files");
 
-        if (picoConfig!.Value == null || picoConfig!.Value.lab == null)
+        if (picoConfig!.Value == null) return 0; // The read/parse failure was logged above.
+        if (picoConfig.Value.lab == null)
         {
-            logger.LogError("Couldn't get the value of `faceTrackingTransferProtocol` on the setting.json file");
+            logger.LogWarning("PICO Connect settings.json has no lab object; transfer protocol is unavailable.");
             return 0; // send default value
         }
 
